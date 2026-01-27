@@ -12,7 +12,7 @@ const compression = require('compression');
 const requestIp = require('request-ip');
 const winston = require('winston');
 require('dotenv').config();
-const path = require("path");
+
 
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
@@ -35,7 +35,6 @@ const logger = winston.createLogger({
 if (!fs.existsSync('logs')) {
     fs.mkdirSync('logs', { recursive: true });
 }
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const app = express();
 const server = http.createServer(app);
 
@@ -43,6 +42,10 @@ const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(UPLOAD_DIR));
+
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = /jpeg|jpg|png|gif|pdf|doc|docx|txt|zip|rar|mp3|mp4|mov|avi|ppt|pptx|xls|xlsx|csv|json|xml|html|css|js/;
 
@@ -110,8 +113,6 @@ const uploadLimiter = rateLimit({
 
 app.use(express.json());
 app.use(requestIp.mw());
-
-app.use('/uploads', express.static(UPLOAD_DIR));
 
 async function getRoom(roomId) {
     try {
