@@ -1,84 +1,82 @@
 const { createClient } = require('redis');
-const winston = require('winston');
-
-const logger = winston.createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [new winston.transports.Console({
-        format: winston.format.combine(winston.format.colorize(), winston.format.simple())
-    })]
-});
+const logger = require('./logger');
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const isTLS = REDIS_URL.startsWith('rediss://');
 
-// Robust Reconnect Strategy for production blips
-const reconnectStrategy = (retries) => {
-    // Start with 1s, max 10s, exponential-ish backoff
-    const delay = Math.min(retries * 500, 10000);
-    return delay;
-};
+let isClosing = false;
+let ready = false;
 
 const clientOptions = {
     url: REDIS_URL,
     socket: {
-        reconnectStrategy,
-        // Critical for Upstash/Render TLS handshake success
-        tls: isTLS ? { rejectUnauthorized: false } : false,
-        // Frequent pings prevent Render's idle reaper
-        pingInterval: 15000,
+        // Keep-alive helps survive platform idle reapers
         keepAlive: 15000,
-        connectTimeout: 20000
-    }
+        reconnectStrategy: retries => Math.min(retries * 1000, 10000),
+        // Critical for Upstash/Render TLS
+        tls: isTLS ? { rejectUnauthorized: false } : false,
+        pingInterval: 15000,
+    },
 };
 
-let pubClient = null;
-let subClient = null;
-let isConnected = false;
-let isClosing = false;
+const pubClient = createClient(clientOptions);
+const subClient = pubClient.duplicate();
 
-function getClients() {
-    if (!pubClient) {
-        pubClient = createClient(clientOptions);
-        subClient = pubClient.duplicate();
+pubClient.on('ready', () => {
+    ready = true;
+    logger.info('✅ Redis Pub READY');
+});
 
-        // Handle Pub Client
-        pubClient.on('connect', () => {
-            isConnected = true;
-            logger.info('✅ Redis Pub Client: Connected');
-        });
+subClient.on('ready', () => {
+    // Both need to be ready for the adapter to be stable
+    logger.info('✅ Redis Sub READY');
+});
 
-        pubClient.on('error', (err) => {
-            isConnected = false;
-            if (err.message.includes('Socket closed unexpectedly')) {
-                // Silently handle discovery/recovery spam
-                logger.debug('Redis Socket: Recovery in progress...');
-            } else if (!isClosing) {
-                logger.error('❌ Redis Pub Client Error:', err);
-            }
-        });
+pubClient.on('connect', () => {
+    logger.info('📡 Redis Pub: Connected (awaiting ready)');
+});
 
-        // Handle Sub Client
-        subClient.on('connect', () => {
-            logger.info('✅ Redis Sub Client: Connected');
-        });
-
-        subClient.on('error', (err) => {
-            if (!err.message.includes('Socket closed unexpectedly') && !isClosing) {
-                logger.error('❌ Redis Sub Client Error:', err);
-            }
-        });
+pubClient.on('error', err => {
+    ready = false;
+    if (!isClosing) {
+        if (err.message.includes('Socket closed unexpectedly')) {
+            logger.warn('⚠️ Redis Pub error (expected during recovery): ' + err.message);
+        } else {
+            logger.error('❌ Redis Pub Client Error:', err);
+        }
     }
+});
 
-    return {
-        pubClient,
-        subClient,
-        isRedisConnected: () => isConnected,
-        setClosing: (val) => { isClosing = val; }
-    };
+subClient.on('error', err => {
+    ready = false;
+    if (!isClosing) {
+        if (err.message.includes('Socket closed unexpectedly')) {
+            logger.warn('⚠️ Redis Sub error (expected during recovery): ' + err.message);
+        } else {
+            logger.error('❌ Redis Sub Client Error:', err);
+        }
+    }
+});
+
+async function connectRedis() {
+    if (ready && pubClient.isOpen && subClient.isOpen) return true;
+    try {
+        // Only attempt connect if not already open/opening
+        if (!pubClient.isOpen) await pubClient.connect();
+        if (!subClient.isOpen) await subClient.connect();
+        return true;
+    } catch (err) {
+        if (!err.message.includes('already open')) {
+            logger.error('❌ Redis connection attempt failed:', err.message);
+        }
+        return false;
+    }
 }
 
-module.exports = { getClients };
+module.exports = {
+    pubClient,
+    subClient,
+    connectRedis,
+    isRedisReady: () => ready && pubClient.isOpen && subClient.isOpen,
+    setClosing: v => (isClosing = v),
+};

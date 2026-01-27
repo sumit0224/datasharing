@@ -10,32 +10,12 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const requestIp = require('request-ip');
-const winston = require('winston');
+const logger = require('./logger');
 require('dotenv').config();
 
 
-const logger = winston.createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [
-        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'logs/combined.log' }),
-        new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize(),
-                winston.format.simple()
-            )
-        })
-    ]
-});
-
-if (!fs.existsSync('logs')) {
-    fs.mkdirSync('logs', { recursive: true });
-}
 const app = express();
+app.set('trust proxy', 1); // Fix express-rate-limit X-Forwarded-For error
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 3000;
@@ -57,8 +37,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-const { getClients } = require('./redisClient');
-const { pubClient, subClient, isRedisConnected, setClosing } = getClients();
+const { pubClient, subClient, connectRedis, isRedisReady, setClosing } = require('./redisClient');
 
 const io = new Server(server, {
     cors: {
@@ -71,22 +50,23 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
-// Stabilized initialization
-async function initRedisAdapter() {
-    if (pubClient.isOpen) return; // Prevent double-triggering
+// Stabilized initialization (Golden Rule: Init adapter only when ready)
+async function attachRedisAdapter() {
+    const ok = await connectRedis();
+    if (!ok) {
+        logger.warn('⚠️ Redis unavailable, running in single-instance mode');
+        return;
+    }
+
     try {
-        await Promise.all([pubClient.connect(), subClient.connect()]);
         io.adapter(createAdapter(pubClient, subClient));
-        logger.info('✅ Socket.IO Redis adapter configured');
+        logger.info('✅ Socket.IO Redis adapter attached');
     } catch (err) {
-        if (!err.message.includes('already open')) {
-            logger.error('❌ Redis adapter initialization failed:', err);
-        }
-        logger.warn('⚠️ Running without Redis (single-server mode)');
+        logger.error('❌ Failed to attach Redis adapter:', err.message);
     }
 }
 
-initRedisAdapter();
+attachRedisAdapter();
 
 app.use(helmet({
     contentSecurityPolicy: false,
@@ -118,6 +98,10 @@ app.use(express.json());
 app.use(requestIp.mw());
 
 async function getRoom(roomId) {
+    if (!isRedisReady()) {
+        logger.warn('Redis not ready, returning cached/empty room state');
+        return { users: [], texts: [], files: [] };
+    }
     try {
         const roomData = await pubClient.get(`room:${roomId}`);
         if (roomData) {
@@ -138,6 +122,7 @@ async function getRoom(roomId) {
 }
 
 async function updateRoom(roomId, roomData) {
+    if (!isRedisReady()) return false;
     try {
         await pubClient.set(`room:${roomId}`, JSON.stringify(roomData));
         return true;
@@ -202,11 +187,12 @@ app.get('/health', (req, res) => {
         status: 'ok',
         uptime: process.uptime(),
         timestamp: Date.now(),
-        redis: isRedisConnected(),
-        isReady: isRedisConnected(),
+        redis: isRedisReady(),
+        isReady: isRedisReady(),
         env: NODE_ENV,
         environment: NODE_ENV,
-        version: '2.0.0'
+        version: '2.0.0',
+        render: !!process.env.RENDER
     });
 });
 
@@ -279,11 +265,13 @@ app.post('/api/upload', uploadLimiter, upload.single('file'), async (req, res) =
             file: fileInfo
         });
 
-        if (process.env.RENDER) {
+        if (!process.env.RENDER) {
             fs.unlink(req.file.path, (err) => {
-                if (err) logger.error('Render unlink error:', err);
-                else logger.info('Render: Cleaned up ephemeral disk after upload');
+                if (err) logger.error('File cleanup error:', err);
+                else logger.info('Local: Cleaned up file after upload');
             });
+        } else {
+            logger.info('Render: Skipping immediate unlink for ephemeral persistence');
         }
     } catch (err) {
         logger.error('Error in /api/upload:', err);
@@ -429,13 +417,14 @@ io.on('connection', (socket) => {
 });
 
 async function cleanupOldData() {
-    if (!isRedisConnected()) return;
+    if (!isRedisReady()) return;
     const now = Date.now();
     let deletedTexts = 0;
     let deletedFiles = 0;
 
     try {
         const keys = await pubClient.keys('room:*');
+        if (!keys || keys.length === 0) return;
 
         for (const key of keys) {
             const roomId = key.replace('room:', '');
@@ -537,7 +526,8 @@ server.listen(PORT, () => {
 📦 Max File Size: ${MAX_FILE_SIZE / 1024 / 1024}MB
 ⏰ Auto-cleanup: Texts (10min) | Files (2min)
 🔒 Security: Helmet, Rate Limiting, Compression
-📊 Redis: ${isRedisConnected() ? 'Connected' : 'Disconnected (fallback mode)'}
+📊 Redis: ${isRedisReady() ? 'Connected' : 'Disconnected (fallback mode)'}
 🌍 Environment: ${NODE_ENV}
+📍 Platform: ${process.env.RENDER ? 'Render' : 'Local/VPS'}
   `);
 });
