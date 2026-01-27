@@ -159,7 +159,7 @@ function App() {
       <header className="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold logo-gradient italic">
+            <h1 className="text-3xl font-bold italic bg-gradient-to-br from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
               machingo
             </h1>
             <div className="flex items-center gap-2">
@@ -203,7 +203,7 @@ function App() {
             aria-selected={activeTab === 'text'}
             aria-controls="text-panel"
             onClick={() => handleTabChange('text')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all focus-ring ${activeTab === 'text'
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 ${activeTab === 'text'
               ? 'bg-white shadow-md border border-gray-200 text-gray-900'
               : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
@@ -218,7 +218,7 @@ function App() {
             aria-selected={activeTab === 'files'}
             aria-controls="files-panel"
             onClick={() => handleTabChange('files')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all focus-ring ${activeTab === 'files'
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 ${activeTab === 'files'
               ? 'bg-white shadow-md border border-gray-200 text-gray-900'
               : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}

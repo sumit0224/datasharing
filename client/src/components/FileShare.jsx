@@ -54,11 +54,11 @@ const FileShare = React.memo(({ files, onUpload, isUploading, uploadProgress, is
         , []);
 
     return (
-        <div className="card fade-in">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden fade-in">
             {/* Header with icon */}
-            <div className="card-header">
+            <div className="p-6 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                    <div className="icon-gradient" aria-hidden="true">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white" aria-hidden="true">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                         </svg>
@@ -68,7 +68,7 @@ const FileShare = React.memo(({ files, onUpload, isUploading, uploadProgress, is
             </div>
 
             {/* Upload Zone */}
-            <div className="card-body border-b border-gray-100">
+            <div className="p-6 border-b border-gray-100">
                 <div
                     {...getRootProps()}
                     className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all
@@ -113,11 +113,11 @@ const FileShare = React.memo(({ files, onUpload, isUploading, uploadProgress, is
             </div>
 
             {/* Files List */}
-            <div className="card-body max-h-96 overflow-y-auto custom-scrollbar">
+            <div className="p-6 max-h-96 overflow-y-auto custom-scrollbar">
                 {files.length > 0 ? (
                     <div className="space-y-3" role="list" aria-label="Shared files">
                         {files.slice().reverse().map((file) => (
-                            <div key={file.id} className="item-card fade-in" role="listitem">
+                            <div key={file.id} className="group p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all fade-in" role="listitem">
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className="text-3xl flex-shrink-0" role="img" aria-label={`${file.originalName} file`}>
@@ -137,7 +137,7 @@ const FileShare = React.memo(({ files, onUpload, isUploading, uploadProgress, is
                                         download
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex-shrink-0 ml-3 btn-primary text-sm py-1.5 px-4"
+                                        className="flex-shrink-0 ml-3 px-8 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed text-sm py-1.5 px-4"
                                         aria-label={`Download ${file.originalName}`}
                                     >
                                         Download

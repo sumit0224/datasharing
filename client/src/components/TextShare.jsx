@@ -17,11 +17,11 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, isConnected }) =>
     }, []);
 
     return (
-        <div className="card fade-in">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden fade-in">
             {/* Header with icon */}
-            <div className="card-header">
+            <div className="p-6 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                    <div className="icon-gradient" aria-hidden="true">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white" aria-hidden="true">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M3 4h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zm0 6h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1v-2a1 1 0 011-1zm0 6h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1v-2a1 1 0 011-1z" />
                         </svg>
@@ -31,13 +31,13 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, isConnected }) =>
             </div>
 
             {/* Input Form */}
-            <div className="card-body border-b border-gray-100">
+            <div className="p-6 border-b border-gray-100">
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <textarea
                         value={currentText}
                         onChange={handleChange}
                         placeholder="Type something..."
-                        className="textarea-base w-full h-40"
+                        className="w-full h-40 p-4 rounded-lg border border-gray-200 text-gray-800 placeholder-gray-400 resize-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
                         disabled={!isConnected}
                         aria-label="Text message input"
                         maxLength={5000}
@@ -49,7 +49,7 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, isConnected }) =>
                         <button
                             type="submit"
                             disabled={!currentText.trim() || !isConnected}
-                            className="btn-outline"
+                            className="px-8 py-2 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:border-purple-500 hover:text-purple-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             aria-label="Save text message"
                         >
                             Save
@@ -59,11 +59,11 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, isConnected }) =>
             </div>
 
             {/* Shared Texts List */}
-            <div className="card-body max-h-96 overflow-y-auto custom-scrollbar">
+            <div className="p-6 max-h-96 overflow-y-auto custom-scrollbar">
                 {texts.length > 0 ? (
                     <div className="space-y-3" role="list" aria-label="Shared text messages">
                         {texts.slice().reverse().map((text) => (
-                            <div key={text.id} className="item-card fade-in" role="listitem">
+                            <div key={text.id} className="group p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all fade-in" role="listitem">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap break-words">
@@ -75,7 +75,7 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, isConnected }) =>
                                     </div>
                                     <button
                                         onClick={() => onCopyText(text.content)}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity btn-icon flex-shrink-0"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded transition-all text-gray-600 hover:text-gray-900 hover:bg-gray-200 flex-shrink-0"
                                         title="Copy text"
                                         aria-label="Copy text to clipboard"
                                     >

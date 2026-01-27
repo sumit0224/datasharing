@@ -8,12 +8,12 @@ const RoomInfo = React.memo(({ roomId, userCount, onCopyRoom }) => {
                 <div className="flex items-center gap-2">
                     <span className="text-gray-600">Room:</span>
                     <code className="bg-gray-100 px-3 py-1 rounded-md font-mono text-xs text-gray-800 select-all">
-                        {roomId || <span className="skeleton w-20 h-4 inline-block"></span>}
+                        {roomId || <span className="bg-gray-200 animate-pulse rounded w-20 h-4 inline-block"></span>}
                     </code>
                     {roomId && (
                         <button
                             onClick={() => onCopyRoom(roomId)}
-                            className="btn-icon"
+                            className="p-2 rounded transition-all text-gray-600 hover:text-gray-900 hover:bg-gray-200"
                             title="Copy Room ID"
                             aria-label="Copy room ID to clipboard"
                         >
