@@ -1,4 +1,4 @@
-name: AirForShare CD
+name: Machingo CD
 
 on:
   push:
