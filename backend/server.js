@@ -58,7 +58,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 }
 
 const { getClients } = require('./redisClient');
-const { pubClient, subClient, isRedisConnected } = getClients();
+const { pubClient, subClient, isRedisConnected, setClosing } = getClients();
 
 const io = new Server(server, {
     cors: {
@@ -73,12 +73,15 @@ const io = new Server(server, {
 
 // Stabilized initialization
 async function initRedisAdapter() {
+    if (pubClient.isOpen) return; // Prevent double-triggering
     try {
         await Promise.all([pubClient.connect(), subClient.connect()]);
         io.adapter(createAdapter(pubClient, subClient));
         logger.info('✅ Socket.IO Redis adapter configured');
     } catch (err) {
-        logger.error('❌ Redis adapter initialization failed:', err);
+        if (!err.message.includes('already open')) {
+            logger.error('❌ Redis adapter initialization failed:', err);
+        }
         logger.warn('⚠️ Running without Redis (single-server mode)');
     }
 }
@@ -508,6 +511,7 @@ function cleanup() {
 }
 
 process.on('SIGINT', async () => {
+    setClosing(true);
     clearInterval(cleanupIntervalId);
     cleanup();
     await pubClient.quit();
@@ -516,6 +520,7 @@ process.on('SIGINT', async () => {
 });
 
 process.on('SIGTERM', async () => {
+    setClosing(true);
     clearInterval(cleanupIntervalId);
     cleanup();
     await pubClient.quit();
