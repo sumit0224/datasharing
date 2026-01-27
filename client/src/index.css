@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 20px;
+    transition: background-color 0.2s;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.8);
+}
+
+/* Gradient Logo Text */
+.logo-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Reusable Card Styles */
+.card {
+    @apply bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden;
+}
+
+.card-header {
+    @apply p-6 border-b border-gray-100;
+}
+
+.card-body {
+    @apply p-6;
+}
+
+/* Icon Containers */
+.icon-gradient {
+    @apply w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center text-white;
+}
+
+/* Button Styles */
+.btn-primary {
+    @apply px-8 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed font-medium;
+}
+
+.btn-outline {
+    @apply px-8 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-purple-500 hover:text-purple-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed font-medium;
+}
+
+.btn-icon {
+    @apply p-2 hover:bg-gray-200 rounded transition-all text-gray-600 hover:text-gray-900;
+}
+
+/* Input Styles */
+.input-base {
+    @apply w-full p-4 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-gray-800 placeholder-gray-400 transition-all;
+}
+
+.textarea-base {
+    @apply input-base resize-none;
+}
+
+/* Message/File Item Cards */
+.item-card {
+    @apply group p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-all hover:shadow-sm;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-down {
+    animation: slideDown 0.3s ease-out;
+}
+
+/* Loading Skeleton */
+.skeleton {
+    @apply bg-gray-200 animate-pulse rounded;
+}
+
+/* Transitions */
+.transition-smooth {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Focus Styles */
+.focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2;
+}

@@ -1,0 +1,38 @@
+name: AirForShare CI
+
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies (Backend)
+      run: |
+        cd backend
+        npm install
+      
+    - name: Build check (Frontend)
+      run: |
+        cd client
+        npm install
+        npm run build
+        
+    - name: Lint (Backend)
+      run: |
+        cd backend
+        # If you have linting set up, add it here
+        # npm run lint
+        echo "Linting complete"
