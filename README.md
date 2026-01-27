@@ -32,6 +32,10 @@ REDIS_URL=redis://localhost:6379
 LOG_LEVEL=info
 NODE_ENV=development
 ```
+> [!TIP]
+> **Redis Token/Password**: If your Redis requires a password (common in cloud providers like Render or Upstash), use this format:
+> `REDIS_URL=redis://:your_password@your_host:your_port`
+
 
 ### 3. Client Directory (`/client`)
 Create a `.env` file in the `client/` folder:
