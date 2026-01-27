@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { createAdapter } = require('@socket.io/redis-adapter');
-const { createClient } = require('redis');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -55,22 +54,8 @@ if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-const pubClient = createClient({ url: REDIS_URL });
-const subClient = pubClient.duplicate();
-
-let redisConnected = false;
-
-pubClient.on('error', (err) => logger.error('Redis Pub Client Error:', err));
-subClient.on('error', (err) => logger.error('Redis Sub Client Error:', err));
-
-pubClient.on('connect', () => {
-    redisConnected = true;
-    logger.info('✅ Redis Pub Client connected');
-});
-
-subClient.on('connect', () => {
-    logger.info('✅ Redis Sub Client connected');
-});
+const { getClients } = require('./redisClient');
+const { pubClient, subClient, isRedisConnected } = getClients();
 
 const io = new Server(server, {
     cors: {
@@ -83,15 +68,19 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
-Promise.all([pubClient.connect(), subClient.connect()])
-    .then(() => {
+// Stabilized initialization
+async function initRedisAdapter() {
+    try {
+        await Promise.all([pubClient.connect(), subClient.connect()]);
         io.adapter(createAdapter(pubClient, subClient));
         logger.info('✅ Socket.IO Redis adapter configured');
-    })
-    .catch((err) => {
-        logger.error('❌ Redis connection failed:', err);
-        logger.warn('⚠️  Running without Redis (single-server mode)');
-    });
+    } catch (err) {
+        logger.error('❌ Redis adapter initialization failed:', err);
+        logger.warn('⚠️ Running without Redis (single-server mode)');
+    }
+}
+
+initRedisAdapter();
 
 app.use(helmet({
     contentSecurityPolicy: false,
@@ -209,8 +198,8 @@ app.get('/health', (req, res) => {
         status: 'ok',
         uptime: process.uptime(),
         timestamp: Date.now(),
-        redis: redisConnected,
-        isReady: redisConnected,
+        redis: isRedisConnected(),
+        isReady: isRedisConnected(),
         env: NODE_ENV,
         environment: NODE_ENV,
         version: '2.0.0'
@@ -436,6 +425,7 @@ io.on('connection', (socket) => {
 });
 
 async function cleanupOldData() {
+    if (!isRedisConnected()) return;
     const now = Date.now();
     let deletedTexts = 0;
     let deletedFiles = 0;
@@ -541,7 +531,7 @@ server.listen(PORT, () => {
 📦 Max File Size: ${MAX_FILE_SIZE / 1024 / 1024}MB
 ⏰ Auto-cleanup: Texts (10min) | Files (2min)
 🔒 Security: Helmet, Rate Limiting, Compression
-📊 Redis: ${redisConnected ? 'Connected' : 'Disconnected (fallback mode)'}
+📊 Redis: ${isRedisConnected() ? 'Connected' : 'Disconnected (fallback mode)'}
 🌍 Environment: ${NODE_ENV}
   `);
 });
