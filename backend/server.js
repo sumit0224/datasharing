@@ -13,6 +13,7 @@ const compression = require('compression');
 const requestIp = require('request-ip');
 const winston = require('winston');
 require('dotenv').config();
+const path = require("path");
 
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
@@ -35,7 +36,7 @@ const logger = winston.createLogger({
 if (!fs.existsSync('logs')) {
     fs.mkdirSync('logs', { recursive: true });
 }
-
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const app = express();
 const server = http.createServer(app);
 
