@@ -47,3 +47,11 @@
 {"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T19:18:38.472Z"}
 {"level":"info","message":"⏹️  Shutting down gracefully...","timestamp":"2026-01-28T19:18:50.648Z"}
 {"level":"info","message":"✅ Redis clients closed","timestamp":"2026-01-28T19:18:50.654Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n    ","timestamp":"2026-01-28T19:24:45.314Z"}
+{"level":"info","message":"✅ Redis Pub ready","timestamp":"2026-01-28T19:24:45.351Z"}
+{"level":"info","message":"🔄 Redis ready, attaching adapter...","timestamp":"2026-01-28T19:24:45.351Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T19:24:45.352Z"}
+{"level":"info","message":"✅ Redis Sub ready","timestamp":"2026-01-28T19:24:45.352Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T19:24:45.655Z"}
+{"level":"info","message":"⏹️  Shutting down gracefully...","timestamp":"2026-01-28T19:24:55.277Z"}
+{"level":"info","message":"✅ Redis clients closed","timestamp":"2026-01-28T19:24:55.278Z"}

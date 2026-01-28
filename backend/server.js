@@ -470,9 +470,20 @@ app.get('/health/ready', async (req, res) => {
 // /health/redis - Functional Redis verification (SOURCE OF TRUTH)
 app.get('/health/redis', async (req, res) => {
     try {
-        // Auto-heal: fire-and-forget reconnect if closed
+        // Auto-heal: fire-and-forget reconnect if closed, then wait briefly
         if (!pubClient.isOpen) {
             pubClient.connect().catch(() => { });
+
+            // Wait up to 2 seconds for connection
+            const timeout = Date.now() + 2000;
+            while (!pubClient.isOpen && Date.now() < timeout) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // If still not open after waiting, report as failed
+            if (!pubClient.isOpen) {
+                throw new Error('Redis not connected (reconnecting in background)');
+            }
         }
 
         const key = `health:${process.pid}:${Date.now()}`;
