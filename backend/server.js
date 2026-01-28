@@ -19,11 +19,15 @@ require('dotenv').config();
 
 // 🛡️ PRODUCTION SAFETY NET: Prevent crashes from unhandled errors
 process.on('uncaughtException', err => {
+    // Socket closures are EXPECTED with Upstash - never crash
+    if (err?.message?.includes('Socket closed unexpectedly')) return;
     console.error('🔥 Uncaught Exception (process survived):', err.message);
     logger.error('Uncaught Exception:', err);
 });
 
 process.on('unhandledRejection', err => {
+    // Socket closures are EXPECTED with Upstash - never crash
+    if (err?.message?.includes('Socket closed unexpectedly')) return;
     console.error('🔥 Unhandled Rejection (process survived):', err?.message);
     logger.error('Unhandled Rejection:', err);
 });
@@ -59,7 +63,7 @@ const TEXT_RETENTION_TIME = 10 * 60 * 1000;
 const FILE_RETENTION_TIME = 2 * 60 * 1000;
 const CLEANUP_INTERVAL = 30 * 1000;
 
-const { pubClient, subClient, connectRedis, isRedisReady, setClosing } = require('./redisClient');
+const { pubClient, subClient, connectRedis, checkRedisFunctional, setClosing } = require('./redisClient');
 const S3Storage = require('./utils/s3Storage');
 const { getSignedDownloadUrl, deleteFile } = require('./utils/r2Client');
 
@@ -71,6 +75,16 @@ const PRESENCE_TTL = 60; // 60 seconds TTL for sockets
 const PASSWORD_SALT_ROUNDS = 12;
 const MAX_PASSWORD_ATTEMPTS = 5;
 const PASSWORD_RATE_WINDOW = 60;
+
+// Simple helper for failover logic (NOT used for health checks)
+function isRedisReady() {
+    try {
+        return pubClient.isReady;
+    } catch {
+        return false;
+    }
+}
+
 
 // Helper: Room Metadata (Redis)
 async function setRoomMeta(roomId, meta) {
@@ -156,12 +170,11 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
-// Stabilized initialization (Production-Safe Adapter Attach)
+// Production-Safe Adapter Attach (Never checks socket state)
 let adapterAttached = false;
 
 function attachRedisAdapterSafe() {
     if (adapterAttached) return;
-    if (!isRedisReady()) return;
 
     try {
         io.adapter(createAdapter(pubClient, subClient));
@@ -175,7 +188,7 @@ function attachRedisAdapterSafe() {
 // Fire-and-forget connect on startup
 connectRedis();
 
-// Attach adapter when Redis becomes ready
+// Attach adapter when Redis becomes ready (event-driven, not state-checked)
 pubClient.on('ready', () => {
     logger.info('🔄 Redis ready, attaching adapter...');
     attachRedisAdapterSafe();
@@ -420,23 +433,14 @@ app.get('/health/live', (req, res) => {
     });
 });
 
-// /health/ready - Dependency readiness
+// /health/ready - Readiness Check
+// Returns 503 ONLY if REQUIRE_REDIS=true AND Redis fails functional test
 app.get('/health/ready', async (req, res) => {
     const requireRedis = process.env.REQUIRE_REDIS === 'true';
     let redisFunctional = true;
 
     if (requireRedis) {
-        try {
-            const key = `healthcheck:ready:${process.pid}`;
-            const value = Date.now().toString();
-
-            await pubClient.set(key, value, { EX: 10 });
-            const result = await pubClient.get(key);
-
-            redisFunctional = result === value;
-        } catch {
-            redisFunctional = false;
-        }
+        redisFunctional = await checkRedisFunctional();
     }
 
     if (requireRedis && !redisFunctional) {
@@ -457,7 +461,7 @@ app.get('/health/ready', async (req, res) => {
         status: 'ready',
         redis: {
             required: requireRedis,
-            functional: true
+            functional: redisFunctional
         },
         auth: {
             enabled: process.env.ENABLE_AUTH === 'true'
@@ -467,45 +471,22 @@ app.get('/health/ready', async (req, res) => {
     });
 });
 
-// /health/redis - Functional Redis verification (SOURCE OF TRUTH)
+// /health/redis - Pure Functional Redis Verification
+// ❌ NEVER checks socket state
+// ✅ ONLY validates actual operations
 app.get('/health/redis', async (req, res) => {
-    try {
-        // Auto-heal: fire-and-forget reconnect if closed, then wait briefly
-        if (!pubClient.isOpen) {
-            pubClient.connect().catch(() => { });
+    const functional = await checkRedisFunctional();
 
-            // Wait up to 2 seconds for connection
-            const timeout = Date.now() + 2000;
-            while (!pubClient.isOpen && Date.now() < timeout) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-
-            // If still not open after waiting, report as failed
-            if (!pubClient.isOpen) {
-                throw new Error('Redis not connected (reconnecting in background)');
-            }
-        }
-
-        const key = `health:${process.pid}:${Date.now()}`;
-        const value = Date.now().toString();
-
-        await pubClient.set(key, value, { EX: 10 });
-        const result = await pubClient.get(key);
-
-        if (result !== value) {
-            throw new Error('Redis read/write mismatch');
-        }
-
+    if (functional) {
         res.status(200).json({
             redis: 'ok',
             mode: 'functional',
             timestamp: Date.now()
         });
-    } catch (err) {
-        logger.warn('Redis health check failed:', err.message);
+    } else {
         res.status(503).json({
             redis: 'failed',
-            error: err.message
+            error: 'Functional check failed (may be reconnecting)'
         });
     }
 });
@@ -1077,7 +1058,7 @@ server.listen(PORT, () => {
 📦 Max File Size: ${MAX_FILE_SIZE / 1024 / 1024}MB
 ⏰ Auto-cleanup: Texts (${TEXT_RETENTION_TIME / 60000}min) | Files (${FILE_RETENTION_TIME / 60000}min)
 🔒 Security: Helmet, Rate Limiting, Compression
-📊 Redis: ${isRedisReady() ? 'Connected' : 'Disconnected (fallback mode)'}
+📊 Redis: Fire-and-forget connection (check /health/redis)
 🌍 Environment: ${NODE_ENV}
 📍 Platform: ${process.env.RENDER ? 'Render' : 'Local/VPS'}
     `);

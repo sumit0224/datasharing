@@ -2,10 +2,11 @@ const { createClient } = require('redis');
 const logger = require('./logger');
 
 /**
- * PRODUCTION-SAFE REDIS CLIENT (Fire-and-Forget Pattern)
- * - NEVER await connect() - use fire-and-forget with .catch()
- * - Error handlers attached BEFORE any connect
- * - Upstash-compatible (handles socket closures gracefully)
+ * PRODUCTION-SAFE REDIS CLIENT (Upstash-Compatible)
+ * - NEVER uses socket state for health determination
+ * - Fire-and-forget connect pattern
+ * - Functional health checks only
+ * - Handles socket closures gracefully
  */
 
 const REDIS_URL = (process.env.REDIS_URL || 'redis://localhost:6379').trim();
@@ -16,9 +17,6 @@ const pubClient = createClient({
   url: REDIS_URL,
   socket: {
     reconnectStrategy: retries => Math.min(retries * 1000, 10000),
-    tls: REDIS_URL?.startsWith('rediss://')
-      ? { rejectUnauthorized: false }
-      : undefined,
     connectTimeout: 10000,
   },
 });
@@ -26,32 +24,31 @@ const pubClient = createClient({
 const subClient = pubClient.duplicate();
 
 /* ---------------------------
-   Event Handlers (MUST be first)
+   Event Handlers (CRITICAL: Must be first)
 ---------------------------- */
 
-// CRITICAL: Attach error handlers immediately to prevent crashes
+// Attach error handlers IMMEDIATELY to prevent crashes
 pubClient.on('error', err => {
-  if (!isClosing && !err?.message?.includes('Socket closed unexpectedly')) {
-    logger.error('❌ Redis Pub Error:', err.message);
-  }
+  // Socket closures are EXPECTED with Upstash - never log as error
+  if (isClosing || err?.message?.includes('Socket closed unexpectedly')) return;
+  logger.warn('⚠️ Redis Pub:', err.message);
 });
 
 subClient.on('error', err => {
-  if (!isClosing && !err?.message?.includes('Socket closed unexpectedly')) {
-    logger.error('❌ Redis Sub Error:', err.message);
-  }
+  if (isClosing || err?.message?.includes('Socket closed unexpectedly')) return;
+  logger.warn('⚠️ Redis Sub:', err.message);
 });
 
 pubClient.on('end', () => {
   connected = false;
   if (!isClosing) {
-    logger.warn('⚠️ Redis connection closed (expected with Upstash)');
+    logger.debug('Redis connection closed (normal with Upstash)');
   }
 });
 
 subClient.on('end', () => {
   if (!isClosing) {
-    logger.warn('⚠️ Redis sub connection closed');
+    logger.debug('Redis sub connection closed');
   }
 });
 
@@ -65,32 +62,33 @@ subClient.on('ready', () => {
 });
 
 /* ---------------------------
-   Fire-and-Forget Connect (Production-Safe)
+   Fire-and-Forget Connect
 ---------------------------- */
 
 function safeConnect(client, name) {
+  // Don't reconnect if already open or connecting
+  if (client.isOpen || client.isReady) return;
+
   client.connect().catch(err => {
-    logger.warn(`⚠️ ${name} Redis connect failed: ${err.message}`);
+    if (!err?.message?.includes('Socket closed unexpectedly')) {
+      logger.warn(`⚠️ ${name} Redis connect failed: ${err.message}`);
+    }
   });
 }
 
 function connectRedis() {
-  if (connected || pubClient.isOpen) return;
   safeConnect(pubClient, 'Pub');
   safeConnect(subClient, 'Sub');
 }
 
 /* ---------------------------
-   Functional Health Check
+   Pure Functional Health Check
+   ❌ NEVER checks socket state
+   ✅ ONLY validates actual operations
 ---------------------------- */
 
 async function checkRedisFunctional() {
   try {
-    // Auto-heal: fire-and-forget reconnect if closed
-    if (!pubClient.isOpen) {
-      pubClient.connect().catch(() => { });
-    }
-
     const key = `healthcheck:functional:${process.pid}:${Date.now()}`;
     const value = Date.now().toString();
 
@@ -98,7 +96,8 @@ async function checkRedisFunctional() {
     const result = await pubClient.get(key);
 
     return result === value;
-  } catch {
+  } catch (err) {
+    // Silently fail - this is a probe, not an error
     return false;
   }
 }
@@ -112,47 +111,6 @@ module.exports = {
   subClient,
   connectRedis,
   checkRedisFunctional,
-  isRedisReady: () => connected && pubClient.isOpen && subClient.isOpen,
-  setClosing: v => {
-    isClosing = v;
-    connected = false;
-  },
-};
-
-
-/* ---------------------------
-   Functional Health Check
----------------------------- */
-
-async function checkRedisFunctional() {
-  try {
-    // Auto-heal: reconnect if closed
-    if (!pubClient.isOpen) {
-      await connectRedis();
-    }
-
-    const key = `healthcheck:functional:${process.pid}:${Date.now()}`;
-    const value = Date.now().toString();
-
-    await pubClient.set(key, value, { EX: 10 });
-    const result = await pubClient.get(key);
-
-    return result === value;
-  } catch {
-    return false;
-  }
-}
-
-/* ---------------------------
-   Exports
----------------------------- */
-
-module.exports = {
-  pubClient,
-  subClient,
-  connectRedis,
-  checkRedisFunctional,
-  isRedisReady: () => connected && pubClient.isOpen && subClient.isOpen,
   setClosing: v => {
     isClosing = v;
     connected = false;
