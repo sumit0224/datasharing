@@ -1058,9 +1058,13 @@ process.on('SIGTERM', async () => {
     process.exit(0);
 });
 
-// 🔥 CRITICAL: Connect Redis on boot (node-redis v4+ requires explicit connect)
+// 🔥 Connect Redis on boot (non-blocking - server starts regardless)
 (async () => {
-    await connectRedis();
+    try {
+        await connectRedis();
+    } catch (err) {
+        logger.warn('⚠️ Redis connection failed on boot, will retry on first use:', err.message);
+    }
 
     server.listen(PORT, () => {
         logger.info(`
