@@ -840,7 +840,7 @@ async function cleanupOldData() {
         // SCAN for room keys (Non-blocking)
         let cursor = 0;
         do {
-            const reply = await pubClient.scan(cursor, { MATCH: 'room:*', COUNT: 50 });
+            const reply = await pubClient.scan(String(cursor), { MATCH: 'room:*', COUNT: 50 });
             cursor = reply.cursor;
             const keys = reply.keys;
 
