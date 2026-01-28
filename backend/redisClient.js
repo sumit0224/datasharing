@@ -19,20 +19,27 @@ let ready = false;
 // Prevent duplicate connection attempts
 let connecting = false;
 
+// Track disconnection time for alerting
+let lastDisconnectTime = null;
+
 const clientOptions = {
   url: REDIS_URL,
   socket: {
-    // Keeps connection alive on Render / Upstash
-    keepAlive: 15000,
-
-    // Controlled reconnect (no storm)
-    reconnectStrategy: retries => Math.min(retries * 1000, 10000),
+    // Conservative reconnect for Upstash (bounded, not aggressive)
+    reconnectStrategy: retries => {
+      // Max 10 retries before giving up temporarily
+      if (retries > 10) {
+        logger.error('❌ Redis reconnect limit reached. Entering fallback mode.');
+        return false; // Stop retrying, will rely on fresh connect attempts
+      }
+      return Math.min(retries * 1000, 10000); // Exponential backoff, max 10s
+    },
 
     // Required for Upstash TLS
     tls: isTLS ? { rejectUnauthorized: false } : false,
 
-    // Avoid idle disconnects
-    pingInterval: 15000,
+    // Connection timeout
+    connectTimeout: 10000,
   },
 };
 
@@ -54,7 +61,14 @@ subClient.on('connect', () => {
 pubClient.on('ready', () => {
   pubReady = true;
   ready = pubReady && subReady;
-  logger.info('✅ Redis Pub READY');
+
+  if (lastDisconnectTime) {
+    const downtime = Math.round((Date.now() - lastDisconnectTime) / 1000);
+    logger.info(`✅ Redis Pub READY (was down ${downtime}s)`);
+    lastDisconnectTime = null;
+  } else {
+    logger.info('✅ Redis Pub READY');
+  }
 });
 
 subClient.on('ready', () => {
@@ -69,9 +83,12 @@ pubClient.on('error', err => {
 
   if (!isClosing) {
     if (err?.message?.includes('Socket closed unexpectedly')) {
-      logger.warn('⚠️ Redis Pub error (expected during recovery)');
+      if (!lastDisconnectTime) {
+        lastDisconnectTime = Date.now();
+        logger.warn('⚠️ Redis disconnected (Upstash behavior - will reconnect)');
+      }
     } else {
-      logger.error('❌ Redis Pub Client Error:', err);
+      logger.error('❌ Redis Pub Client Error:', err.message);
     }
   }
 });
@@ -82,9 +99,9 @@ subClient.on('error', err => {
 
   if (!isClosing) {
     if (err?.message?.includes('Socket closed unexpectedly')) {
-      logger.warn('⚠️ Redis Sub error (expected during recovery)');
+      // Don't spam logs, already logged by pub client
     } else {
-      logger.error('❌ Redis Sub Client Error:', err);
+      logger.error('❌ Redis Sub Client Error:', err.message);
     }
   }
 });
@@ -121,4 +138,5 @@ module.exports = {
   connectRedis,
   isRedisReady: () => ready && pubClient.isOpen && subClient.isOpen,
   setClosing: v => (isClosing = v),
+  getDisconnectDuration: () => lastDisconnectTime ? Date.now() - lastDisconnectTime : 0,
 };

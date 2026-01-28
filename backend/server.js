@@ -146,15 +146,23 @@ const io = new Server(server, {
 });
 
 // Stabilized initialization (Golden Rule: Init adapter only when ready)
-// Stabilized initialization (Golden Rule: Init adapter only when ready)
 let adapterAttached = false;
+let adapterWarningLogged = false;
 
 async function attachRedisAdapter() {
-    if (adapterAttached) return;
+    if (adapterAttached) return; // Already attached
 
     const ok = await connectRedis();
     if (!ok) {
-        logger.warn('⚠️ Redis unavailable, running in single-instance mode');
+        if (!adapterWarningLogged) {
+            logger.warn('⚠️ Redis unavailable, running in single-instance mode');
+            adapterWarningLogged = true;
+        }
+        return;
+    }
+
+    // Double-check readiness before attaching
+    if (!isRedisReady()) {
         return;
     }
 
@@ -405,21 +413,54 @@ const upload = multer({
     fileFilter
 });
 
-app.get('/health', (req, res) => {
-    res.json({
+// Kubernetes-style Health Endpoints
+// /health/live - Process liveness (NEVER depends on dependencies)
+app.get('/health/live', (req, res) => {
+    res.status(200).json({
         status: 'ok',
         uptime: process.uptime(),
-        timestamp: Date.now(),
-        redis: isRedisReady(),
-        isReady: true,
-        env: NODE_ENV,
-        environment: NODE_ENV,
-        version: '2.0.0',
-        render: !!process.env.RENDER,
+        timestamp: Date.now()
+    });
+});
+
+// /health/ready - Dependency readiness
+app.get('/health/ready', (req, res) => {
+    const redisReady = isRedisReady();
+    const requireRedis = process.env.REQUIRE_REDIS === 'true';
+    const adapterStatus = adapterAttached;
+    const disconnectDuration = require('./redisClient').getDisconnectDuration();
+
+    // Fail readiness if Redis is required but unavailable
+    if (requireRedis && !redisReady) {
+        return res.status(503).json({
+            status: 'not_ready',
+            reason: 'Redis required but unavailable',
+            redis: {
+                connected: false,
+                adapterAttached: adapterStatus,
+                disconnectedFor: disconnectDuration > 0 ? `${Math.round(disconnectDuration / 1000)}s` : null
+            },
+            auth: {
+                enabled: process.env.ENABLE_AUTH === 'true'
+            },
+            environment: NODE_ENV
+        });
+    }
+
+    // Ready
+    res.status(200).json({
+        status: 'ready',
+        redis: {
+            connected: redisReady,
+            adapterAttached: adapterStatus,
+            required: requireRedis
+        },
         auth: {
             enabled: process.env.ENABLE_AUTH === 'true',
             strategy: 'jwt-cookie'
-        }
+        },
+        environment: NODE_ENV,
+        version: '2.0.0'
     });
 });
 
@@ -953,23 +994,19 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-function cleanup() {
-    logger.info('Cleaning up uploads...');
-    if (fs.existsSync(UPLOAD_DIR)) {
-        const files = fs.readdirSync(UPLOAD_DIR);
-        files.forEach(file => {
-            fs.unlinkSync(path.join(UPLOAD_DIR, file));
-        });
-    }
-    logger.info('Cleanup complete.');
-}
-
 process.on('SIGINT', async () => {
+    logger.info('⏹️  Shutting down gracefully...');
     setClosing(true);
     clearInterval(cleanupIntervalId);
-    cleanup();
-    await pubClient.quit();
-    await subClient.quit();
+
+    try {
+        await pubClient.quit();
+        await subClient.quit();
+        logger.info('✅ Redis clients closed');
+    } catch (err) {
+        logger.warn('Redis cleanup error:', err.message);
+    }
+
     process.exit(0);
 });
 

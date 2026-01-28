@@ -486,3 +486,57 @@
 {"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T18:01:34.323Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T18:01:36.074Z"}
 {"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:01:36.086Z"}
+{"level":"info","message":"Cleaning up uploads...","timestamp":"2026-01-28T18:17:16.705Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n  ","timestamp":"2026-01-28T18:17:20.047Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:17:20.077Z"}
+{"level":"info","message":"✅ Redis Pub READY","timestamp":"2026-01-28T18:17:20.079Z"}
+{"level":"info","message":"🔄 Redis re-connected, ensuring adapter is attached...","timestamp":"2026-01-28T18:17:20.080Z"}
+{"level":"warn","message":"⚠️ Redis unavailable, running in single-instance mode","timestamp":"2026-01-28T18:17:20.080Z"}
+{"level":"info","message":"📡 Redis Sub: Connected (awaiting ready)","timestamp":"2026-01-28T18:17:20.120Z"}
+{"level":"info","message":"✅ Redis Sub READY","timestamp":"2026-01-28T18:17:20.121Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T18:17:20.122Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T18:17:20.412Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T18:17:21.092Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:17:21.105Z"}
+{"level":"info","message":"Cleaning up uploads...","timestamp":"2026-01-28T18:20:23.607Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n  ","timestamp":"2026-01-28T18:20:34.338Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:34.390Z"}
+{"level":"warn","message":"⚠️ Redis disconnected (Upstash behavior - will reconnect)","timestamp":"2026-01-28T18:20:34.422Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:34.460Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T18:20:34.693Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:35.536Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:37.617Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T18:20:38.100Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:20:38.108Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:40.694Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:44.771Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:49.844Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:20:55.914Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:21:02.993Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:21:11.071Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:21:20.160Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:21:30.238Z"}
+{"level":"error","message":"❌ Redis reconnect limit reached. Entering fallback mode.","timestamp":"2026-01-28T18:21:30.271Z"}
+{"level":"error","message":"❌ Redis connection attempt failed:","timestamp":"2026-01-28T18:21:30.272Z"}
+{"level":"warn","message":"⚠️ Redis unavailable, running in single-instance mode","timestamp":"2026-01-28T18:21:30.272Z"}
+{"level":"info","message":"Cleaning up uploads...","timestamp":"2026-01-28T18:26:05.472Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n  ","timestamp":"2026-01-28T18:26:08.288Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:08.332Z"}
+{"level":"warn","message":"⚠️ Redis disconnected (Upstash behavior - will reconnect)","timestamp":"2026-01-28T18:26:08.472Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:08.512Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T18:26:09.239Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:09.714Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T18:26:10.112Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:26:10.120Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:11.780Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:14.849Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:18.927Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:24.017Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:30.091Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:37.162Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:45.250Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:26:54.324Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:27:04.404Z"}
+{"level":"error","message":"❌ Redis reconnect limit reached. Entering fallback mode.","timestamp":"2026-01-28T18:27:04.436Z"}
+{"level":"error","message":"❌ Redis connection attempt failed:","timestamp":"2026-01-28T18:27:04.437Z"}
+{"level":"warn","message":"⚠️ Redis unavailable, running in single-instance mode","timestamp":"2026-01-28T18:27:04.437Z"}
