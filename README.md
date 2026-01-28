@@ -64,6 +64,11 @@ VITE_API_URL=http://localhost:3000
 
 ## 🏗 Architecture
 
+### Technical Highlights
+- **State-Aware Redis**: Built on a resilient singleton pattern that gates all operations behind connection health checks. Supports Upstash TLS out of the box.
+- **Unique Presence**: Uses Redis Sets to track unique `deviceId`s. Opening 10 tabs in the same browser will correctly show as only 1 online user.
+- **Graceful Degradation**: Automatically falls back to in-memory Maps and single-instance mode if Redis goes offline.
+
 ### Room Logic
 - **IP Detection**: detects client's IP address.
 - **Room ID Generation**: First 3 octets of IP → `room-192-168-1`.
@@ -88,9 +93,10 @@ machingo/
 
 - [x] IP-based automatic room joining
 - [x] Real-time text & file sharing
-- [x] Production-ready with Redis
+- [x] Unique Device Tracking (1 user = 1 device)
+- [x] Production-ready with "State-Aware" Redis Singleton
 - [x] Docker & CI/CD support
-- [x] Render-ready with ephemeral disk fix
+- [x] Render-ready with ephemeral disk persistence strategy
 - [x] Mobile-responsive minimalist UI
 
 ---

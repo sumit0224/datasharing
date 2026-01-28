@@ -132,10 +132,60 @@ async function updateRoom(roomId, roomData) {
     }
 }
 
+// In-memory fallback for presence tracking if Redis is down
+const inMemoryPresence = new Map(); // roomId -> Map<deviceId, Set<socketId>>
+
+async function addDevicePresence(roomId, deviceId, socketId) {
+    if (isRedisReady()) {
+        const deviceKey = `presence:room:${roomId}:device:${deviceId}:sockets`;
+        const roomKey = `presence:room:${roomId}:devices`;
+        await pubClient.sAdd(deviceKey, socketId);
+        await pubClient.sAdd(roomKey, deviceId);
+        // Set TTL for presence keys (24 hours)
+        await pubClient.expire(deviceKey, 86400);
+        await pubClient.expire(roomKey, 86400);
+    } else {
+        if (!inMemoryPresence.has(roomId)) inMemoryPresence.set(roomId, new Map());
+        const room = inMemoryPresence.get(roomId);
+        if (!room.has(deviceId)) room.set(deviceId, new Set());
+        room.get(deviceId).add(socketId);
+    }
+}
+
+async function removeDevicePresence(roomId, deviceId, socketId) {
+    if (!roomId || !deviceId) return;
+
+    if (isRedisReady()) {
+        const deviceKey = `presence:room:${roomId}:device:${deviceId}:sockets`;
+        const roomKey = `presence:room:${roomId}:devices`;
+        await pubClient.sRem(deviceKey, socketId);
+        const remainingSockets = await pubClient.sCard(deviceKey);
+        if (remainingSockets === 0) {
+            await pubClient.sRem(roomKey, deviceId);
+        }
+    } else {
+        const room = inMemoryPresence.get(roomId);
+        if (room && room.has(deviceId)) {
+            const deviceSockets = room.get(deviceId);
+            deviceSockets.delete(socketId);
+            if (deviceSockets.size === 0) {
+                room.delete(deviceId);
+            }
+            if (room.size === 0) {
+                inMemoryPresence.delete(roomId);
+            }
+        }
+    }
+}
+
 async function getRoomUserCount(roomId) {
     try {
-        const sockets = await io.in(roomId).fetchSockets();
-        return sockets.length;
+        if (isRedisReady()) {
+            return await pubClient.sCard(`presence:room:${roomId}:devices`);
+        } else {
+            const room = inMemoryPresence.get(roomId);
+            return room ? room.size : 0;
+        }
     } catch (err) {
         logger.error('Error getting user count:', err);
         return 0;
@@ -330,17 +380,21 @@ io.on('connection', (socket) => {
 
     let currentRoom = null;
 
-    socket.on('join_room', async (roomId) => {
+    socket.on('join_room', async (roomId, deviceId) => {
         try {
             if (currentRoom) {
                 socket.leave(currentRoom);
+                await removeDevicePresence(currentRoom, socket.data.deviceId, socket.id);
                 const userCount = await getRoomUserCount(currentRoom);
                 io.to(currentRoom).emit('user_count', userCount);
             }
 
             currentRoom = roomId;
+            socket.data.roomId = roomId;
+            socket.data.deviceId = deviceId || `legacy_${socket.id.substring(0, 8)}`;
             socket.join(roomId);
 
+            await addDevicePresence(roomId, socket.data.deviceId, socket.id);
             const room = await getRoom(roomId);
             const userCount = await getRoomUserCount(roomId);
 
@@ -353,7 +407,7 @@ io.on('connection', (socket) => {
 
             io.to(roomId).emit('user_count', userCount);
 
-            logger.info(`User ${socket.id} joined room ${roomId}. Users: ${userCount}`);
+            logger.info(`User ${socket.id} (Device: ${socket.data.deviceId}) joined room ${roomId}. Unique Devices: ${userCount}`);
         } catch (err) {
             logger.error('Error in join_room:', err);
         }
@@ -368,7 +422,7 @@ io.on('connection', (socket) => {
                 id: Date.now().toString(),
                 content: data.content,
                 timestamp: new Date().toISOString(),
-                senderId: socket.id.substring(0, 8)
+                senderId: (socket.data.deviceId || socket.id).substring(0, 8)
             };
 
             room.texts.push(textEntry);
@@ -381,7 +435,7 @@ io.on('connection', (socket) => {
 
             io.to(currentRoom).emit('text_shared', textEntry);
 
-            logger.info(`Text shared in room ${currentRoom}`);
+            logger.info(`Text shared in room ${currentRoom} by ${socket.id}`);
         } catch (err) {
             logger.error('Error in send_text:', err);
         }
@@ -405,9 +459,10 @@ io.on('connection', (socket) => {
     socket.on('disconnect', async () => {
         if (currentRoom) {
             try {
+                await removeDevicePresence(currentRoom, socket.data.deviceId, socket.id);
                 const userCount = await getRoomUserCount(currentRoom);
                 io.to(currentRoom).emit('user_count', userCount);
-                logger.info(`User ${socket.id} left room ${currentRoom}. Users: ${userCount}`);
+                logger.info(`User ${socket.id} left room ${currentRoom}. Unique Devices: ${userCount}`);
             } catch (err) {
                 logger.error('Error in disconnect:', err);
             }

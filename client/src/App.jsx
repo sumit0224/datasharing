@@ -25,6 +25,16 @@ function App() {
   const [activeTab, setActiveTab] = useState('text');
   const [isConnected, setIsConnected] = useState(false);
 
+  // Generate or retrieve unique device ID
+  const deviceId = useMemo(() => {
+    let id = localStorage.getItem('deviceId');
+    if (!id) {
+      id = 'dev_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+      localStorage.setItem('deviceId', id);
+    }
+    return id;
+  }, []);
+
   const toastOptions = useMemo(() => ({
     position: "bottom-right",
     theme: "light",
@@ -94,7 +104,7 @@ function App() {
     try {
       const { data } = await axios.get(`${SOCKET_URL}/api/room-info`);
       setRoomId(data.roomId);
-      socket.emit('join_room', data.roomId);
+      socket.emit('join_room', data.roomId, deviceId);
     } catch (error) {
       console.error('Failed to fetch room info:', error);
       toast.error('Failed to connect to room server.', toastOptions);
