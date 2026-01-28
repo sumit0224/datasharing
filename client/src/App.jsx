@@ -170,7 +170,7 @@ function App() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold italic bg-gradient-to-br from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
-              machingo
+              matchingo
             </h1>
             <div className="flex items-center gap-2">
               {isConnected ? (
@@ -265,7 +265,7 @@ function App() {
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-500">
-        <p>© {new Date().getFullYear()} Machingo</p>
+        <p>© {new Date().getFullYear()} Matchingo</p>
         <p className="mt-1">Made by ❤️ sumit gautam</p>
       </footer>
     </div>

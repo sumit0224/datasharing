@@ -1,4 +1,4 @@
-name: Machingo CD
+name: Matchingo CD
 
 on:
   push:

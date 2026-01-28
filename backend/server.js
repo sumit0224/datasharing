@@ -574,7 +574,7 @@ process.on('SIGTERM', async () => {
 
 server.listen(PORT, () => {
     logger.info(`
-🚀 Machingo Server Running! (v2.0 - Production)
+🚀 Matchingo Server Running! (v2.0 - Production)
 📡 Port: ${PORT}
 🌐 Client URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}
 📁 Uploads: ${UPLOAD_DIR}

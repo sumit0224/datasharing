@@ -1,4 +1,4 @@
-name: Machingo CI
+name: Matchingo CI
 
 on:
   push:

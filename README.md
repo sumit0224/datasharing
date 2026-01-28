@@ -1,6 +1,6 @@
-# Machingo - Wi-Fi Based Data & File Sharing
+# Matchingo - Wi-Fi Based Data & File Sharing
 
-Machingo is a modern, light-themed web application that allows users on the same Wi-Fi network to share text and files instantly without any login or setup.
+Matchingo is a modern, light-themed web application that allows users on the same Wi-Fi network to share text and files instantly without any login or setup.
 
 ## 📋 Requirements
 
@@ -14,7 +14,7 @@ To run this project locally or in production, you need:
 
 ## ⚙️ Environment Setup
 
-Machingo requires specific environment variables to function correctly. Follow these steps to set them up:
+Matchingo requires specific environment variables to function correctly. Follow these steps to set them up:
 
 ### 1. Root Directory
 Create a `.env` file in the root directory (optional, used by root scripts):
@@ -79,7 +79,7 @@ VITE_API_URL=http://localhost:3000
 
 ## 📦 Folder Structure
 ```
-machingo/
+matchingo/
 ├── backend/            # Express server & logic
 ├── client/             # React (Vite) frontend
 ├── .github/workflows/  # CI/CD pipelines

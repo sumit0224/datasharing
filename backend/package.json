@@ -1,5 +1,5 @@
 {
-  "name": "machingo-backend",
+  "name": "matchingo-backend",
   "version": "1.0.0",
   "description": "Node.js Backend (Express + JS)",
   "main": "server.js",
