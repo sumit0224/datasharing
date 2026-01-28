@@ -6,6 +6,7 @@ const logger = require('./logger');
  * - Explicit connection required (node-redis v4+)
  * - Auto-reconnect on connection loss
  * - Upstash-compatible
+ * - Error handlers attached BEFORE connect to prevent crashes
  */
 
 const REDIS_URL = (process.env.REDIS_URL || 'redis://localhost:6379').trim();
@@ -26,6 +27,36 @@ const pubClient = createClient({
 const subClient = pubClient.duplicate();
 
 /* ---------------------------
+   Event Handlers (MUST be first - before any connect())
+---------------------------- */
+
+// CRITICAL: Attach error handlers immediately to prevent crashes
+pubClient.on('error', err => {
+  if (!isClosing && !err?.message?.includes('Socket closed unexpectedly')) {
+    logger.error('❌ Redis Pub Error:', err.message);
+  }
+});
+
+subClient.on('error', err => {
+  if (!isClosing && !err?.message?.includes('Socket closed unexpectedly')) {
+    logger.error('❌ Redis Sub Error:', err.message);
+  }
+});
+
+pubClient.on('end', () => {
+  connected = false;
+  if (!isClosing) {
+    logger.warn('⚠️ Redis connection closed (will auto-reconnect on next use)');
+  }
+});
+
+subClient.on('end', () => {
+  if (!isClosing) {
+    logger.warn('⚠️ Redis sub connection closed');
+  }
+});
+
+/* ---------------------------
    Connection Lifecycle
 ---------------------------- */
 
@@ -43,35 +74,6 @@ async function connectRedis() {
     return false;
   }
 }
-
-/* ---------------------------
-   Event Handlers
----------------------------- */
-
-pubClient.on('end', () => {
-  connected = false;
-  if (!isClosing) {
-    logger.warn('⚠️ Redis connection closed (will auto-reconnect on next use)');
-  }
-});
-
-subClient.on('end', () => {
-  if (!isClosing) {
-    logger.warn('⚠️ Redis sub connection closed');
-  }
-});
-
-pubClient.on('error', err => {
-  if (!isClosing && !err?.message?.includes('Socket closed unexpectedly')) {
-    logger.error('❌ Redis Pub Error:', err.message);
-  }
-});
-
-subClient.on('error', err => {
-  if (!isClosing && !err?.message?.includes('Socket closed unexpectedly')) {
-    logger.error('❌ Redis Sub Error:', err.message);
-  }
-});
 
 /* ---------------------------
    Functional Health Check
