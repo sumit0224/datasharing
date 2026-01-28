@@ -417,52 +417,86 @@ const upload = multer({
 // /health/live - Process liveness (NEVER depends on dependencies)
 app.get('/health/live', (req, res) => {
     res.status(200).json({
-        status: 'ok',
+        status: 'alive',
         uptime: process.uptime(),
         timestamp: Date.now()
     });
 });
 
 // /health/ready - Dependency readiness
-app.get('/health/ready', (req, res) => {
-    const redisReady = isRedisReady();
+app.get('/health/ready', async (req, res) => {
     const requireRedis = process.env.REQUIRE_REDIS === 'true';
-    const adapterStatus = adapterAttached;
-    const disconnectDuration = require('./redisClient').getDisconnectDuration();
+    let redisFunctional = true;
 
-    // Fail readiness if Redis is required but unavailable
-    if (requireRedis && !redisReady) {
+    if (requireRedis) {
+        try {
+            const key = `healthcheck:ready:${process.pid}`;
+            const value = Date.now().toString();
+
+            await pubClient.set(key, value, { EX: 10 });
+            const result = await pubClient.get(key);
+
+            redisFunctional = result === value;
+        } catch {
+            redisFunctional = false;
+        }
+    }
+
+    if (requireRedis && !redisFunctional) {
         return res.status(503).json({
             status: 'not_ready',
-            reason: 'Redis required but unavailable',
+            reason: 'Redis required but not functional',
             redis: {
-                connected: false,
-                adapterAttached: adapterStatus,
-                disconnectedFor: disconnectDuration > 0 ? `${Math.round(disconnectDuration / 1000)}s` : null
+                required: true,
+                functional: false
             },
             auth: {
                 enabled: process.env.ENABLE_AUTH === 'true'
-            },
-            environment: NODE_ENV
+            }
         });
     }
 
-    // Ready
     res.status(200).json({
         status: 'ready',
         redis: {
-            connected: redisReady,
-            adapterAttached: adapterStatus,
-            required: requireRedis
+            required: requireRedis,
+            functional: true
         },
         auth: {
-            enabled: process.env.ENABLE_AUTH === 'true',
-            strategy: 'jwt-cookie'
+            enabled: process.env.ENABLE_AUTH === 'true'
         },
         environment: NODE_ENV,
         version: '2.0.0'
     });
 });
+
+// /health/redis - Functional Redis verification (SOURCE OF TRUTH)
+app.get('/health/redis', async (req, res) => {
+    try {
+        const key = `healthcheck:${process.pid}:${Date.now()}`;
+        const value = Date.now().toString();
+
+        await pubClient.set(key, value, { EX: 10 });
+        const result = await pubClient.get(key);
+
+        if (result !== value) {
+            throw new Error('Redis read/write mismatch');
+        }
+
+        res.status(200).json({
+            redis: 'ok',
+            mode: 'functional',
+            timestamp: Date.now()
+        });
+    } catch (err) {
+        logger.warn('Redis health check failed:', err.message);
+        res.status(503).json({
+            redis: 'failed',
+            error: err.message
+        });
+    }
+});
+
 
 app.get('/api/room-info', apiLimiter, async (req, res) => {
     try {

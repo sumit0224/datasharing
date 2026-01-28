@@ -129,6 +129,26 @@ async function connectRedis() {
 }
 
 /* ---------------------------
+   Functional Health Check
+---------------------------- */
+
+async function checkRedisFunctional() {
+  // ❌ DO NOT check socket state: if (!ready || !pubClient.isOpen) return false;
+  // ✅ Only test actual functionality
+  try {
+    const key = `healthcheck:functional:${process.pid}:${Date.now()}`;
+    const value = Date.now().toString();
+
+    await pubClient.set(key, value, { EX: 10 });
+    const result = await pubClient.get(key);
+
+    return result === value;
+  } catch {
+    return false;
+  }
+}
+
+/* ---------------------------
    Exports
 ---------------------------- */
 
@@ -136,6 +156,7 @@ module.exports = {
   pubClient,
   subClient,
   connectRedis,
+  checkRedisFunctional,
   isRedisReady: () => ready && pubClient.isOpen && subClient.isOpen,
   setClosing: v => (isClosing = v),
   getDisconnectDuration: () => lastDisconnectTime ? Date.now() - lastDisconnectTime : 0,
