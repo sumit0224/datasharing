@@ -473,7 +473,12 @@ app.get('/health/ready', async (req, res) => {
 // /health/redis - Functional Redis verification (SOURCE OF TRUTH)
 app.get('/health/redis', async (req, res) => {
     try {
-        const key = `healthcheck:${process.pid}:${Date.now()}`;
+        // Auto-heal: reconnect if closed
+        if (!pubClient.isOpen) {
+            await connectRedis();
+        }
+
+        const key = `health:${process.pid}:${Date.now()}`;
         const value = Date.now().toString();
 
         await pubClient.set(key, value, { EX: 10 });
@@ -1053,8 +1058,12 @@ process.on('SIGTERM', async () => {
     process.exit(0);
 });
 
-server.listen(PORT, () => {
-    logger.info(`
+// 🔥 CRITICAL: Connect Redis on boot (node-redis v4+ requires explicit connect)
+(async () => {
+    await connectRedis();
+
+    server.listen(PORT, () => {
+        logger.info(`
 🚀 Matchingo Server Running! (v2.0 - Production)
 📡 Port: ${PORT}
 🌐 Client URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}
@@ -1064,5 +1073,7 @@ server.listen(PORT, () => {
 📊 Redis: ${isRedisReady() ? 'Connected' : 'Disconnected (fallback mode)'}
 🌍 Environment: ${NODE_ENV}
 📍 Platform: ${process.env.RENDER ? 'Render' : 'Local/VPS'}
-  `);
-});
+    `);
+    });
+})();
+

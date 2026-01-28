@@ -9,3 +9,13 @@
 {"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T18:41:31.394Z"}
 {"level":"info","message":"⏹️  Shutting down gracefully...","timestamp":"2026-01-28T18:42:35.476Z"}
 {"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T18:42:35.476Z"}
+{"level":"info","message":"🔄 Redis re-connected, ensuring adapter is attached...","timestamp":"2026-01-28T18:58:53.052Z"}
+{"level":"info","message":"✅ Redis connected","timestamp":"2026-01-28T18:58:53.058Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T18:58:53.059Z"}
+{"level":"info","message":"✅ Redis connected","timestamp":"2026-01-28T18:58:53.059Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T18:58:53.059Z"}
+{"level":"info","message":"✅ Redis connected","timestamp":"2026-01-28T18:58:53.059Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Connected\n🌍 Environment: development\n📍 Platform: Local/VPS\n    ","timestamp":"2026-01-28T18:58:53.061Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T18:58:53.366Z"}
+{"level":"info","message":"⏹️  Shutting down gracefully...","timestamp":"2026-01-28T18:59:06.144Z"}
+{"level":"info","message":"✅ Redis clients closed","timestamp":"2026-01-28T18:59:06.145Z"}
