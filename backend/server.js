@@ -13,6 +13,7 @@ const requestIp = require('request-ip');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const cookie = require('cookie');
+const bcrypt = require('bcrypt');
 const logger = require('./logger');
 require('dotenv').config();
 
@@ -62,6 +63,39 @@ const { pubClient, subClient, connectRedis, isRedisReady, setClosing } = require
 const roomSnapshotCache = new Map(); // roomId -> { texts, files, lastUpdated }
 const ROOM_REPAIR_CHANNEL = 'room:repair';
 const PRESENCE_TTL = 60; // 60 seconds TTL for sockets
+
+const PASSWORD_SALT_ROUNDS = 12;
+const MAX_PASSWORD_ATTEMPTS = 5;
+const PASSWORD_RATE_WINDOW = 60;
+
+// Helper: Room Metadata (Redis)
+async function setRoomMeta(roomId, meta) {
+    if (!isRedisReady()) return;
+    const key = `room:${roomId}:meta`;
+    await pubClient.hSet(key, meta);
+    if (meta.expiresAt) {
+        const ttl = Math.ceil((new Date(meta.expiresAt).getTime() - Date.now()) / 1000);
+        if (ttl > 0) await pubClient.expire(key, ttl);
+    }
+}
+
+async function getRoomMeta(roomId) {
+    if (!isRedisReady()) return null;
+    const key = `room:${roomId}:meta`;
+    const meta = await pubClient.hGetAll(key);
+    return Object.keys(meta).length ? meta : null;
+}
+
+// Helper: Rate Limiting for Join
+async function checkRateLimit(ip, roomId) {
+    if (!isRedisReady()) return true; // Fail open if Redis down
+    const key = `rate:join:${ip}:${roomId}`;
+    const attempts = await pubClient.incr(key);
+    if (attempts === 1) {
+        await pubClient.expire(key, PASSWORD_RATE_WINDOW);
+    }
+    return attempts <= MAX_PASSWORD_ATTEMPTS;
+}
 
 // Task 3: Redis Pub/Sub for State Repair
 subClient.subscribe(ROOM_REPAIR_CHANNEL, async (message) => {
@@ -444,6 +478,43 @@ app.get('/api/room/:roomId', apiLimiter, async (req, res) => {
     }
 });
 
+app.post('/api/room/create', apiLimiter, async (req, res) => {
+    try {
+        const { type, password, expiresIn } = req.body;
+        const clientIp = req.clientIp;
+
+        // Generate a random ID for private rooms to avoid collisions
+        const roomId = type === 'private'
+            ? `private-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`
+            : generateRoomId(clientIp);
+
+        const meta = {
+            type: type || 'public',
+            createdAt: new Date().toISOString()
+        };
+
+        if (type === 'private') {
+            if (!password || password.length < 6) {
+                return res.status(400).json({ error: 'Password must be at least 6 characters' });
+            }
+            meta.passwordHash = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
+
+            if (expiresIn) {
+                const expiresAt = new Date(Date.now() + expiresIn * 60 * 1000);
+                meta.expiresAt = expiresAt.toISOString();
+            }
+        }
+
+        await setRoomMeta(roomId, meta);
+        await updateRoom(roomId, { texts: [], files: [] }); // Initialize room
+
+        res.json({ roomId });
+    } catch (err) {
+        logger.error('Error creating room:', err);
+        res.status(500).json({ error: 'Failed to create room' });
+    }
+});
+
 app.post('/api/upload', uploadLimiter, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
@@ -551,7 +622,8 @@ io.on('connection', (socket) => {
     logger.info('🔌 New Client Connected:', socket.id);
 
     // Join room logic
-    socket.on('join_room', async (roomId, deviceId, guestId) => {
+    socket.on('join_room', async (roomId, rawPassword, deviceId, guestId) => {
+        const password = typeof rawPassword === 'string' ? rawPassword : '';
         if (!roomId) return;
 
         // Leave previous room if any
@@ -563,6 +635,38 @@ io.on('connection', (socket) => {
                     await removeDevicePresence(previousRoom, socket.data.deviceId, socket.id);
                 }
             }
+        }
+
+        // --- Private Room Security Check ---
+        const meta = await getRoomMeta(roomId);
+
+        // Fix: Detect if room is private but meta is missing (expired/deleted)
+        if (!meta && roomId.startsWith('private-')) {
+            socket.emit('room_error', { code: 'ROOM_NOT_FOUND', message: 'Room does not exist or has expired' });
+            return;
+        }
+
+        if (meta && meta.type === 'private') {
+            const clientIp = socket.handshake.address || socket.request.connection.remoteAddress;
+
+            // Check Rate Limit
+            const allowed = await checkRateLimit(clientIp, roomId);
+            if (!allowed) {
+                socket.emit('room_error', { code: 'TOO_MANY_ATTEMPTS', message: 'Too many failed attempts. Try again later.' });
+                return;
+            }
+
+            // Verify Password
+            const valid = password && await bcrypt.compare(password, meta.passwordHash);
+            if (!valid) {
+                // Log generic failure
+                logger.warn(`Private room join failed: ${roomId} (Invalid Password) | IP: ${clientIp}`);
+                socket.emit('room_error', { code: 'INVALID_PASSWORD', message: 'Incorrect room password' });
+                return;
+            }
+
+            // Fix: Clear rate limit on success
+            await pubClient.del(`rate:join:${clientIp}:${roomId}`);
         }
 
         socket.join(roomId);
@@ -586,6 +690,7 @@ io.on('connection', (socket) => {
             const room = await getRoom(roomId);
             socket.emit('room_state', {
                 roomId,
+                isPrivate: meta && meta.type === 'private',
                 texts: room.texts,
                 files: room.files,
                 userCount
@@ -644,6 +749,62 @@ io.on('connection', (socket) => {
             logger.info(`Texts cleared in room ${currentRoom}`);
         } catch (err) {
             logger.error('Error in clear_texts:', err);
+        }
+    });
+
+    socket.on('close_room', async () => {
+        const currentRoom = socket.data.currentRoom;
+        if (!currentRoom) return;
+
+        logger.info(`Request to CLOSE room: ${currentRoom} by ${socket.id}`);
+
+        try {
+            if (!isRedisReady()) {
+                // Fallback for single instance (in-memory only)
+                roomSnapshotCache.delete(currentRoom);
+                io.to(currentRoom).emit('room_closed');
+                io.in(currentRoom).disconnectSockets();
+                return;
+            }
+
+            // 1. Get meta to check type (optional: verify password if needed more security later)
+            const metaKey = `room:${currentRoom}:meta`;
+
+            // 2. Delete all related keys
+            await Promise.all([
+                pubClient.del(`room:${currentRoom}:data`),
+                pubClient.del(metaKey),
+                pubClient.del(`presence:room:${currentRoom}:devices`),
+                // Also need to clean up file metadata if strict, but auto-cleanup handles files eventually.
+                // For immediate cleanup of files array in Redis:
+                // (Already handled by deleting data key)
+            ]);
+
+            // 3. Clean up individual socket presence keys is hard without scanning, 
+            // but they have TTLs so they will expire.
+            // We should remove the room from the Set of active rooms if we tracked that.
+
+            // 4. Broadcast Closure
+            // Use broadcastRoomUpdate equivalent but specific event
+            await pubClient.publish(ROOM_REPAIR_CHANNEL, JSON.stringify({
+                type: 'ROOM_CLOSED',
+                roomId: currentRoom
+            }));
+
+            // 5. Emit to local sockets immediately
+            io.to(currentRoom).emit('room_closed');
+
+            // 6. Force disconnect everyone in the room
+            // Give them a split second to receive the event
+            setTimeout(() => {
+                io.in(currentRoom).disconnectSockets();
+            }, 100);
+
+            logger.info(`✅ Room ${currentRoom} DESTROYED and closed.`);
+
+        } catch (err) {
+            logger.error(`Error closing room ${currentRoom}:`, err);
+            socket.emit('room_error', { message: 'Failed to close room' });
         }
     });
 
@@ -728,7 +889,18 @@ async function cleanupOldData() {
 
                 // Cleanup empty rooms from snapshot cache
                 if (room.texts.length === 0 && room.files.length === 0) {
-                    roomSnapshotCache.delete(roomId);
+                    // Check if private room expired
+                    const meta = await getRoomMeta(roomId);
+                    if (meta && meta.expiresAt && new Date(meta.expiresAt) < new Date(now)) {
+                        // Expired
+                        await pubClient.del(`room:${roomId}:meta`);
+                        await broadcastRoomUpdate(roomId, 'room_closed', { reason: 'expired' });
+                        roomSnapshotCache.delete(roomId);
+                        logger.info(`💀 Room ${roomId} expired and deleted`);
+                    } else if (!meta || meta.type !== 'private') {
+                        // Public/Empty rooms cleanup logic (if desired, or keep snapshot for a while)
+                        roomSnapshotCache.delete(roomId);
+                    }
                 }
             }
         } while (cursor !== 0);
