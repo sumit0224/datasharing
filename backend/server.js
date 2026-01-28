@@ -502,6 +502,7 @@ app.post('/api/room/create', apiLimiter, async (req, res) => {
             if (expiresIn) {
                 const expiresAt = new Date(Date.now() + expiresIn * 60 * 1000);
                 meta.expiresAt = expiresAt.toISOString();
+                logger.info(`Creating Private Room ${roomId} with Expiry: ${meta.expiresAt} (in ${expiresIn} mins)`);
             }
         }
 
@@ -845,6 +846,9 @@ async function cleanupOldData() {
             const keys = reply.keys;
 
             for (const key of keys) {
+                // Fix: Skip meta keys to avoid WRONGTYPE errors on getRoom
+                if (key.endsWith(':meta')) continue;
+
                 const roomId = key.replace('room:', '');
                 const room = await getRoom(roomId);
                 let changed = false;
@@ -909,7 +913,11 @@ async function cleanupOldData() {
             logger.info(`🧹 Cleanup: Removed ${deletedTexts} texts and ${deletedFiles} files`);
         }
     } catch (err) {
-        logger.error('Error in cleanupOldData:', err);
+        if (err.message && (err.message.includes('client is closed') || err.message.includes('Socket closed'))) {
+            logger.warn('⚠️ Redis connection lost during cleanup (skipping)');
+        } else {
+            logger.error('Error in cleanupOldData:', err);
+        }
     }
 }
 
