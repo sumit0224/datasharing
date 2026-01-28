@@ -19,8 +19,8 @@ app.set('trust proxy', 1); // Fix express-rate-limit X-Forwarded-For error
 const server = http.createServer(app);
 
 const PORT = process.env.PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const NODE_ENV = (process.env.NODE_ENV || 'development').trim();
+const REDIS_URL = (process.env.REDIS_URL || 'redis://localhost:6379').trim();
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 
 // Serve static files from the uploads directory
@@ -41,7 +41,7 @@ const { pubClient, subClient, connectRedis, isRedisReady, setClosing } = require
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        origin: (process.env.CLIENT_URL || 'http://localhost:5173').trim(),
         methods: ['GET', 'POST'],
         credentials: true
     },
@@ -74,7 +74,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (process.env.CLIENT_URL || 'http://localhost:5173').trim(),
     credentials: true
 }));
 
