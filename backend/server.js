@@ -10,8 +10,15 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const requestIp = require('request-ip');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const cookie = require('cookie');
 const logger = require('./logger');
 require('dotenv').config();
+
+const { authMiddleware } = require('./middleware/authMiddleware');
+const authController = require('./controllers/authController');
+const { verifyAccessToken } = require('./utils/jwt');
 
 
 const app = express();
@@ -21,7 +28,19 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = (process.env.NODE_ENV || 'development').trim();
 const REDIS_URL = (process.env.REDIS_URL || 'redis://localhost:6379').trim();
+const MONGO_URI = process.env.MONGO_URI;
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
+
+// MongoDB Connection
+if (process.env.ENABLE_AUTH === 'true') {
+    if (!MONGO_URI) {
+        logger.error('❌ MONGO_URI is missing while ENABLE_AUTH is true');
+    } else {
+        mongoose.connect(MONGO_URI)
+            .then(() => logger.info('✅ MongoDB Connected'))
+            .catch(err => logger.error('❌ MongoDB Connection Error:', err));
+    }
+}
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(UPLOAD_DIR));
@@ -39,6 +58,55 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 
 const { pubClient, subClient, connectRedis, isRedisReady, setClosing } = require('./redisClient');
 
+// Room Snapshot Cache (Refresh Persistence)
+const roomSnapshotCache = new Map(); // roomId -> { texts, files, lastUpdated }
+const ROOM_REPAIR_CHANNEL = 'room:repair';
+const PRESENCE_TTL = 60; // 60 seconds TTL for sockets
+
+// Task 3: Redis Pub/Sub for State Repair
+subClient.subscribe(ROOM_REPAIR_CHANNEL, async (message) => {
+    try {
+        const { roomId } = JSON.parse(message);
+        if (!roomId) return;
+
+        if (isRedisReady()) {
+            const data = await pubClient.get(`room:${roomId}`);
+            if (data) {
+                const parsed = JSON.parse(data);
+                roomSnapshotCache.set(roomId, {
+                    texts: parsed.texts,
+                    files: parsed.files,
+                    lastUpdated: Date.now()
+                });
+                logger.debug(`🔧 Room ${roomId} repaired via Pub/Sub`);
+            }
+        }
+    } catch (err) {
+        logger.error('Error in room repair listener:', err);
+    }
+});
+
+async function broadcastRoomUpdate(roomId, eventName, payload) {
+    io.to(roomId).emit(eventName, payload);
+}
+
+async function ensureRoomHydrated(roomId) {
+    if (roomSnapshotCache.has(roomId)) return;
+    if (!isRedisReady()) return;
+
+    try {
+        const data = await pubClient.get(`room:${roomId}`);
+        if (data) {
+            roomSnapshotCache.set(roomId, JSON.parse(data));
+        } else {
+            // Trigger repair if we missed it
+            await pubClient.publish(ROOM_REPAIR_CHANNEL, JSON.stringify({ roomId }));
+        }
+    } catch (err) {
+        logger.warn(`Failed to hydrate room ${roomId}:`, err.message);
+    }
+}
+
 const io = new Server(server, {
     cors: {
         origin: (process.env.CLIENT_URL || 'http://localhost:5173').trim(),
@@ -51,7 +119,12 @@ const io = new Server(server, {
 });
 
 // Stabilized initialization (Golden Rule: Init adapter only when ready)
+// Stabilized initialization (Golden Rule: Init adapter only when ready)
+let adapterAttached = false;
+
 async function attachRedisAdapter() {
+    if (adapterAttached) return;
+
     const ok = await connectRedis();
     if (!ok) {
         logger.warn('⚠️ Redis unavailable, running in single-instance mode');
@@ -60,13 +133,59 @@ async function attachRedisAdapter() {
 
     try {
         io.adapter(createAdapter(pubClient, subClient));
+        adapterAttached = true;
         logger.info('✅ Socket.IO Redis adapter attached');
     } catch (err) {
         logger.error('❌ Failed to attach Redis adapter:', err.message);
     }
 }
 
+// Attach on startup
 attachRedisAdapter();
+
+// Re-attach on reconnect
+pubClient.on('ready', () => {
+    logger.info('🔄 Redis re-connected, ensuring adapter is attached...');
+    attachRedisAdapter();
+});
+
+// --- Socket.IO Handshake Authentication ---
+io.use((socket, next) => {
+    if (process.env.ENABLE_AUTH !== 'true') {
+        socket.user = null;
+        return next();
+    }
+
+    const rawCookies = socket.request.headers.cookie;
+    if (!rawCookies) {
+        socket.user = null;
+        return next();
+    }
+
+    const parsedCookies = cookie.parse(rawCookies);
+    const token = parsedCookies.accessToken;
+
+    if (!token) {
+        socket.user = null;
+        return next();
+    }
+
+    try {
+        const payload = verifyAccessToken(token);
+        socket.user = {
+            id: payload.sub,
+            anonymousName: payload.anonymousName,
+            avatarColor: payload.avatarColor,
+            isGuest: false
+        };
+        logger.debug(`Socket authenticated: ${socket.user.anonymousName}`);
+        next();
+    } catch (err) {
+        logger.debug('Socket auth failed:', err.message);
+        socket.user = null;
+        next();
+    }
+});
 
 app.use(helmet({
     contentSecurityPolicy: false,
@@ -94,34 +213,68 @@ const uploadLimiter = rateLimit({
     message: 'Too many file uploads, please try again later.'
 });
 
+const authLimiter = {
+    register: rateLimit({ windowMs: 60 * 1000, max: 3, message: { error: 'Too many registration attempts' } }),
+    login: rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Too many login attempts' } }),
+    refresh: rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Too many refresh attempts' } })
+};
+
 app.use(express.json());
+app.use(cookieParser());
 app.use(requestIp.mw());
+app.use(authMiddleware);
+
+// --- Auth Routes ---
+if (process.env.ENABLE_AUTH === 'true') {
+    app.post('/api/auth/register', authLimiter.register, authController.register);
+    app.post('/api/auth/login', authLimiter.login, authController.login);
+    app.post('/api/auth/logout', authController.logout);
+    app.get('/api/auth/me', authController.me);
+    app.post('/api/auth/refresh', authLimiter.refresh, authController.refreshToken);
+}
 
 async function getRoom(roomId) {
-    if (!isRedisReady()) {
-        logger.warn('Redis not ready, returning cached/empty room state');
-        return { users: [], texts: [], files: [] };
-    }
-    try {
-        const roomData = await pubClient.get(`room:${roomId}`);
-        if (roomData) {
-            return JSON.parse(roomData);
+    if (isRedisReady()) {
+        try {
+            const data = await pubClient.get(`room:${roomId}`);
+            if (data) {
+                const parsed = JSON.parse(data);
+
+                // Sync snapshot cache
+                roomSnapshotCache.set(roomId, {
+                    texts: parsed.texts,
+                    files: parsed.files,
+                    lastUpdated: Date.now()
+                });
+
+                return parsed;
+            }
+        } catch (err) {
+            logger.warn('Redis read failed, using snapshot cache');
         }
-        const newRoom = {
-            users: [],
-            texts: [],
-            files: [],
-            createdAt: new Date().toISOString()
-        };
-        await pubClient.set(`room:${roomId}`, JSON.stringify(newRoom));
-        return newRoom;
-    } catch (err) {
-        logger.error('Error getting room:', err);
-        return { users: [], texts: [], files: [] };
     }
+
+    // Fallback to snapshot cache
+    const snapshot = roomSnapshotCache.get(roomId);
+    if (snapshot) {
+        return {
+            users: [],
+            texts: snapshot.texts,
+            files: snapshot.files
+        };
+    }
+
+    return { users: [], texts: [], files: [] };
 }
 
 async function updateRoom(roomId, roomData) {
+    // Always update snapshot cache first
+    roomSnapshotCache.set(roomId, {
+        texts: roomData.texts,
+        files: roomData.files,
+        lastUpdated: Date.now()
+    });
+
     if (!isRedisReady()) return false;
     try {
         await pubClient.set(`room:${roomId}`, JSON.stringify(roomData));
@@ -139,11 +292,12 @@ async function addDevicePresence(roomId, deviceId, socketId) {
     if (isRedisReady()) {
         const deviceKey = `presence:room:${roomId}:device:${deviceId}:sockets`;
         const roomKey = `presence:room:${roomId}:devices`;
+
         await pubClient.sAdd(deviceKey, socketId);
+        await pubClient.expire(deviceKey, PRESENCE_TTL); // Auto-expire sockets
+
         await pubClient.sAdd(roomKey, deviceId);
-        // Set TTL for presence keys (24 hours)
-        await pubClient.expire(deviceKey, 86400);
-        await pubClient.expire(roomKey, 86400);
+        await pubClient.expire(roomKey, 86400); // Room devices keep longer retention
     } else {
         if (!inMemoryPresence.has(roomId)) inMemoryPresence.set(roomId, new Map());
         const room = inMemoryPresence.get(roomId);
@@ -160,6 +314,7 @@ async function removeDevicePresence(roomId, deviceId, socketId) {
         const roomKey = `presence:room:${roomId}:devices`;
         await pubClient.sRem(deviceKey, socketId);
         const remainingSockets = await pubClient.sCard(deviceKey);
+
         if (remainingSockets === 0) {
             await pubClient.sRem(roomKey, deviceId);
         }
@@ -238,11 +393,15 @@ app.get('/health', (req, res) => {
         uptime: process.uptime(),
         timestamp: Date.now(),
         redis: isRedisReady(),
-        isReady: isRedisReady(),
+        isReady: true,
         env: NODE_ENV,
         environment: NODE_ENV,
         version: '2.0.0',
-        render: !!process.env.RENDER
+        render: !!process.env.RENDER,
+        auth: {
+            enabled: process.env.ENABLE_AUTH === 'true',
+            strategy: 'jwt-cookie'
+        }
     });
 });
 
@@ -269,6 +428,7 @@ app.get('/api/room-info', apiLimiter, async (req, res) => {
 app.get('/api/room/:roomId', apiLimiter, async (req, res) => {
     try {
         const { roomId } = req.params;
+        await ensureRoomHydrated(roomId);
         const room = await getRoom(roomId);
         const userCount = await getRoomUserCount(roomId);
 
@@ -291,7 +451,18 @@ app.post('/api/upload', uploadLimiter, upload.single('file'), async (req, res) =
         }
 
         const roomId = req.body.roomId || 'local-room';
+        await ensureRoomHydrated(roomId);
         const room = await getRoom(roomId);
+
+        // Use persistent guestId if available, fallback to deviceId
+        const guestId = req.body.guestId || (req.body.deviceId || 'anon').substring(0, 8);
+
+        const sender = {
+            id: req.user ? req.user.id : null,
+            name: req.user ? req.user.anonymousName : `Guest_${guestId}`,
+            avatarColor: req.user ? req.user.avatarColor : '#667eea',
+            isGuest: !req.user
+        };
 
         const fileInfo = {
             id: Date.now().toString(),
@@ -300,13 +471,14 @@ app.post('/api/upload', uploadLimiter, upload.single('file'), async (req, res) =
             size: req.file.size,
             mimetype: req.file.mimetype,
             uploadedAt: new Date().toISOString(),
-            downloadUrl: `/uploads/${req.file.filename}`
+            downloadUrl: `/uploads/${req.file.filename}`,
+            sender
         };
 
         room.files.push(fileInfo);
         await updateRoom(roomId, room);
 
-        io.to(roomId).emit('file_shared', fileInfo);
+        await broadcastRoomUpdate(roomId, 'file_shared', fileInfo);
 
         logger.info(`File uploaded: ${fileInfo.originalName} to room ${roomId}`);
 
@@ -366,7 +538,7 @@ app.delete('/api/file/:fileId', apiLimiter, async (req, res) => {
         room.files.splice(fileIndex, 1);
         await updateRoom(roomId, room);
 
-        io.to(roomId).emit('file_deleted', { id: fileId });
+        await broadcastRoomUpdate(roomId, 'file_deleted', { id: fileId });
 
         res.json({ success: true });
     } catch (err) {
@@ -376,53 +548,72 @@ app.delete('/api/file/:fileId', apiLimiter, async (req, res) => {
 });
 
 io.on('connection', (socket) => {
-    logger.info(`User connected: ${socket.id}`);
+    logger.info('🔌 New Client Connected:', socket.id);
 
-    let currentRoom = null;
+    // Join room logic
+    socket.on('join_room', async (roomId, deviceId, guestId) => {
+        if (!roomId) return;
 
-    socket.on('join_room', async (roomId, deviceId) => {
-        try {
-            if (currentRoom) {
-                socket.leave(currentRoom);
-                await removeDevicePresence(currentRoom, socket.data.deviceId, socket.id);
-                const userCount = await getRoomUserCount(currentRoom);
-                io.to(currentRoom).emit('user_count', userCount);
+        // Leave previous room if any
+        if (socket.rooms.size > 1) {
+            const previousRoom = Array.from(socket.rooms).filter(r => r !== socket.id)[0];
+            if (previousRoom) {
+                socket.leave(previousRoom);
+                if (socket.data.deviceId) {
+                    await removeDevicePresence(previousRoom, socket.data.deviceId, socket.id);
+                }
             }
+        }
 
-            currentRoom = roomId;
-            socket.data.roomId = roomId;
-            socket.data.deviceId = deviceId || `legacy_${socket.id.substring(0, 8)}`;
-            socket.join(roomId);
+        socket.join(roomId);
+        socket.data.currentRoom = roomId;
+        // Prioritize legacy deviceId logic for uniqueness, but store guestId for display
+        socket.data.deviceId = deviceId || `legacy_${socket.id.substring(0, 8)}`;
+        socket.data.guestId = guestId || socket.data.deviceId.substring(0, 8);
 
-            await addDevicePresence(roomId, socket.data.deviceId, socket.id);
+        await addDevicePresence(roomId, socket.data.deviceId, socket.id);
+
+        // Ensure we have fresh state
+        await ensureRoomHydrated(roomId);
+
+        const userCount = await getRoomUserCount(roomId);
+        await broadcastRoomUpdate(roomId, 'user_count', userCount);
+
+        logger.info(`User joined room: ${roomId} | Device: ${socket.data.deviceId} | User: ${socket.user ? socket.user.anonymousName : 'Guest'}`);
+
+        // Send current room state
+        try {
             const room = await getRoom(roomId);
-            const userCount = await getRoomUserCount(roomId);
-
             socket.emit('room_state', {
                 roomId,
                 texts: room.texts,
                 files: room.files,
                 userCount
             });
-
-            io.to(roomId).emit('user_count', userCount);
-
-            logger.info(`User ${socket.id} (Device: ${socket.data.deviceId}) joined room ${roomId}. Unique Devices: ${userCount}`);
         } catch (err) {
-            logger.error('Error in join_room:', err);
+            logger.error('Error sending room state:', err);
         }
     });
 
     socket.on('send_text', async (data) => {
+        const currentRoom = socket.data.currentRoom;
         if (!currentRoom) return;
 
         try {
+            await ensureRoomHydrated(currentRoom);
             const room = await getRoom(currentRoom);
+            const sender = {
+                id: socket.user ? socket.user.id : null,
+                name: socket.user ? socket.user.anonymousName : `Guest_${socket.data.guestId}`,
+                avatarColor: socket.user ? socket.user.avatarColor : '#667eea',
+                isGuest: !socket.user
+            };
+
             const textEntry = {
                 id: Date.now().toString(),
                 content: data.content,
                 timestamp: new Date().toISOString(),
-                senderId: (socket.data.deviceId || socket.id).substring(0, 8)
+                sender
             };
 
             room.texts.push(textEntry);
@@ -433,7 +624,7 @@ io.on('connection', (socket) => {
 
             await updateRoom(currentRoom, room);
 
-            io.to(currentRoom).emit('text_shared', textEntry);
+            await broadcastRoomUpdate(currentRoom, 'text_shared', textEntry);
 
             logger.info(`Text shared in room ${currentRoom} by ${socket.id}`);
         } catch (err) {
@@ -448,7 +639,7 @@ io.on('connection', (socket) => {
             const room = await getRoom(currentRoom);
             room.texts = [];
             await updateRoom(currentRoom, room);
-            io.to(currentRoom).emit('texts_cleared');
+            await broadcastRoomUpdate(currentRoom, 'texts_cleared');
 
             logger.info(`Texts cleared in room ${currentRoom}`);
         } catch (err) {
@@ -457,6 +648,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', async () => {
+        const currentRoom = socket.data.currentRoom;
         if (currentRoom) {
             try {
                 await removeDevicePresence(currentRoom, socket.data.deviceId, socket.id);
@@ -473,54 +665,73 @@ io.on('connection', (socket) => {
 
 async function cleanupOldData() {
     if (!isRedisReady()) return;
+
+    // Distributed Lock
+    const lockKey = 'cleanup:lock';
+    const acquired = await pubClient.set(lockKey, String(process.pid), { NX: true, EX: 30 });
+    if (!acquired) return; // Another instance is cleaning
+
     const now = Date.now();
     let deletedTexts = 0;
     let deletedFiles = 0;
 
     try {
-        const keys = await pubClient.keys('room:*');
-        if (!keys || keys.length === 0) return;
+        // SCAN for room keys (Non-blocking)
+        let cursor = 0;
+        do {
+            const reply = await pubClient.scan(cursor, { MATCH: 'room:*', COUNT: 50 });
+            cursor = reply.cursor;
+            const keys = reply.keys;
 
-        for (const key of keys) {
-            const roomId = key.replace('room:', '');
-            const room = await getRoom(roomId);
+            for (const key of keys) {
+                const roomId = key.replace('room:', '');
+                const room = await getRoom(roomId);
+                let changed = false;
 
-            const initialTextCount = room.texts.length;
-            room.texts = room.texts.filter(text => {
-                const textAge = now - new Date(text.timestamp).getTime();
-                return textAge < TEXT_RETENTION_TIME;
-            });
-            deletedTexts += initialTextCount - room.texts.length;
+                const initialTextCount = room.texts.length;
+                room.texts = room.texts.filter(text => {
+                    const textAge = now - new Date(text.timestamp).getTime();
+                    return textAge < TEXT_RETENTION_TIME;
+                });
+                if (room.texts.length !== initialTextCount) changed = true;
+                deletedTexts += initialTextCount - room.texts.length;
 
-            const filesToDelete = room.files.filter(file => {
-                const fileAge = now - new Date(file.uploadedAt).getTime();
-                return fileAge >= FILE_RETENTION_TIME;
-            });
+                const filesToDelete = room.files.filter(file => {
+                    const fileAge = now - new Date(file.uploadedAt).getTime();
+                    return fileAge >= FILE_RETENTION_TIME;
+                });
 
-            filesToDelete.forEach(file => {
-                const filePath = path.join(UPLOAD_DIR, file.filename);
-                if (fs.existsSync(filePath)) {
-                    try {
-                        fs.unlinkSync(filePath);
-                        logger.info(`🗑️  Auto-deleted file: ${file.originalName}`);
-                    } catch (err) {
-                        logger.error(`Failed to delete file ${file.filename}:`, err);
+                filesToDelete.forEach(file => {
+                    const filePath = path.join(UPLOAD_DIR, file.filename);
+                    if (fs.existsSync(filePath)) {
+                        try {
+                            fs.unlinkSync(filePath);
+                            logger.info(`🗑️  Auto-deleted file: ${file.originalName}`);
+                        } catch (err) {
+                            logger.error(`Failed to delete file ${file.filename}:`, err);
+                        }
                     }
+                    io.to(roomId).emit('file_deleted', { id: file.id });
+                });
+
+                const initialFileCount = room.files.length;
+                room.files = room.files.filter(file => {
+                    const fileAge = now - new Date(file.uploadedAt).getTime();
+                    return fileAge < FILE_RETENTION_TIME;
+                });
+                if (room.files.length !== initialFileCount) changed = true;
+                deletedFiles += initialFileCount - room.files.length;
+
+                if (changed) {
+                    await updateRoom(roomId, room);
                 }
-                io.to(roomId).emit('file_deleted', { id: file.id });
-            });
 
-            const initialFileCount = room.files.length;
-            room.files = room.files.filter(file => {
-                const fileAge = now - new Date(file.uploadedAt).getTime();
-                return fileAge < FILE_RETENTION_TIME;
-            });
-            deletedFiles += initialFileCount - room.files.length;
-
-            if (deletedTexts > 0 || deletedFiles > 0) {
-                await updateRoom(roomId, room);
+                // Cleanup empty rooms from snapshot cache
+                if (room.texts.length === 0 && room.files.length === 0) {
+                    roomSnapshotCache.delete(roomId);
+                }
             }
-        }
+        } while (cursor !== 0);
 
         if (deletedTexts > 0 || deletedFiles > 0) {
             logger.info(`🧹 Cleanup: Removed ${deletedTexts} texts and ${deletedFiles} files`);

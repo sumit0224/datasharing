@@ -7,15 +7,25 @@ import axios from 'axios';
 import RoomInfo from './components/RoomInfo';
 import TextShare from './components/TextShare';
 import FileShare from './components/FileShare';
+import AuthModal from './components/modals/AuthModal';
+import ProfileDropdown from './components/ProfileDropdown';
+import { useAuth } from './context/AuthContext';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const socket = io(SOCKET_URL, {
-  reconnection: true,
-  reconnectionDelay: 1000,
-  reconnectionAttempts: 5
-});
+
+let socket = null;
+
+function createSocket() {
+  return io(SOCKET_URL, {
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5,
+    withCredentials: true
+  });
+}
 
 function App() {
+  const { user, isAuthenticated, logout } = useAuth();
   const [roomId, setRoomId] = useState('');
   const [userCount, setUserCount] = useState(0);
   const [texts, setTexts] = useState([]);
@@ -24,15 +34,26 @@ function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState('text');
   const [isConnected, setIsConnected] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Generate or retrieve unique device ID
-  const deviceId = useMemo(() => {
-    let id = localStorage.getItem('deviceId');
-    if (!id) {
-      id = 'dev_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-      localStorage.setItem('deviceId', id);
+  // Stabilized Guest Identity
+  const { deviceId, guestId } = useMemo(() => {
+    let dId = localStorage.getItem('deviceId');
+    let gId = localStorage.getItem('guestId');
+
+    if (!dId) {
+      dId = 'dev_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+      localStorage.setItem('deviceId', dId);
     }
-    return id;
+
+    if (!gId) {
+      // 8-char stable ID for guest names
+      gId = Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('guestId', gId);
+    }
+
+    return { deviceId: dId, guestId: gId };
   }, []);
 
   const toastOptions = useMemo(() => ({
@@ -42,7 +63,13 @@ function App() {
     hideProgressBar: false
   }), []);
 
+  // Socket initialization and reconnection on auth change
   useEffect(() => {
+    if (socket) {
+      socket.disconnect();
+    }
+    socket = createSocket();
+
     const handleConnect = () => {
       console.log('Connected to server');
       setIsConnected(true);
@@ -90,26 +117,28 @@ function App() {
     socket.on('file_deleted', handleFileDeleted);
 
     return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('room_state', handleRoomState);
-      socket.off('user_count', handleUserCount);
-      socket.off('text_shared', handleTextShared);
-      socket.off('file_shared', handleFileShared);
-      socket.off('file_deleted', handleFileDeleted);
+      if (socket) {
+        socket.off('connect', handleConnect);
+        socket.off('disconnect', handleDisconnect);
+        socket.off('room_state', handleRoomState);
+        socket.off('user_count', handleUserCount);
+        socket.off('text_shared', handleTextShared);
+        socket.off('file_shared', handleFileShared);
+        socket.off('file_deleted', handleFileDeleted);
+      }
     };
-  }, [toastOptions]);
+  }, [toastOptions, isAuthenticated]);
 
   const fetchRoomInfo = useCallback(async () => {
     try {
       const { data } = await axios.get(`${SOCKET_URL}/api/room-info`);
       setRoomId(data.roomId);
-      socket.emit('join_room', data.roomId, deviceId);
+      socket.emit('join_room', data.roomId, deviceId, guestId);
     } catch (error) {
       console.error('Failed to fetch room info:', error);
       toast.error('Failed to connect to room server.', toastOptions);
     }
-  }, [toastOptions]);
+  }, [toastOptions, deviceId, guestId]);
 
   const handleSendText = useCallback((content) => {
     if (!isConnected) {
@@ -191,7 +220,11 @@ function App() {
             <button className="hover:text-gray-900 transition">Download</button>
             <button className="hover:text-gray-900 transition">Upgrade</button>
             <button className="hover:text-gray-900 transition">Feedback</button>
-            <button className="text-blue-600 hover:text-blue-700 transition">Login / Register</button>
+            {isAuthenticated ? (
+              <ProfileDropdown />
+            ) : (
+              <button onClick={() => setShowAuthModal(true)} className="text-blue-600 hover:text-blue-700 transition">Login / Register</button>
+            )}
           </nav>
         </div>
       </header>
@@ -268,6 +301,8 @@ function App() {
         <p>© {new Date().getFullYear()} Matchingo</p>
         <p className="mt-1">Made by ❤️ sumit gautam</p>
       </footer>
+
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }
