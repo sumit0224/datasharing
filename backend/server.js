@@ -17,6 +17,17 @@ const bcrypt = require('bcrypt');
 const logger = require('./logger');
 require('dotenv').config();
 
+// 🛡️ PRODUCTION SAFETY NET: Prevent crashes from unhandled errors
+process.on('uncaughtException', err => {
+    console.error('🔥 Uncaught Exception (process survived):', err.message);
+    logger.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', err => {
+    console.error('🔥 Unhandled Rejection (process survived):', err?.message);
+    logger.error('Unhandled Rejection:', err);
+});
+
 const { authMiddleware } = require('./middleware/authMiddleware');
 const authController = require('./controllers/authController');
 const { verifyAccessToken } = require('./utils/jwt');
@@ -145,43 +156,29 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
-// Stabilized initialization (Golden Rule: Init adapter only when ready)
+// Stabilized initialization (Production-Safe Adapter Attach)
 let adapterAttached = false;
-let adapterWarningLogged = false;
 
-async function attachRedisAdapter() {
-    if (adapterAttached) return; // Already attached
-
-    const ok = await connectRedis();
-    if (!ok) {
-        if (!adapterWarningLogged) {
-            logger.warn('⚠️ Redis unavailable, running in single-instance mode');
-            adapterWarningLogged = true;
-        }
-        return;
-    }
-
-    // Double-check readiness before attaching
-    if (!isRedisReady()) {
-        return;
-    }
+function attachRedisAdapterSafe() {
+    if (adapterAttached) return;
+    if (!isRedisReady()) return;
 
     try {
         io.adapter(createAdapter(pubClient, subClient));
         adapterAttached = true;
         logger.info('✅ Socket.IO Redis adapter attached');
     } catch (err) {
-        logger.error('❌ Failed to attach Redis adapter:', err.message);
+        logger.warn('⚠️ Redis adapter attach failed, fallback to memory:', err.message);
     }
 }
 
-// Attach on startup
-attachRedisAdapter();
+// Fire-and-forget connect on startup
+connectRedis();
 
-// Re-attach on reconnect
+// Attach adapter when Redis becomes ready
 pubClient.on('ready', () => {
-    logger.info('🔄 Redis re-connected, ensuring adapter is attached...');
-    attachRedisAdapter();
+    logger.info('🔄 Redis ready, attaching adapter...');
+    attachRedisAdapterSafe();
 });
 
 // --- Socket.IO Handshake Authentication ---
@@ -473,9 +470,9 @@ app.get('/health/ready', async (req, res) => {
 // /health/redis - Functional Redis verification (SOURCE OF TRUTH)
 app.get('/health/redis', async (req, res) => {
     try {
-        // Auto-heal: reconnect if closed
+        // Auto-heal: fire-and-forget reconnect if closed
         if (!pubClient.isOpen) {
-            await connectRedis();
+            pubClient.connect().catch(() => { });
         }
 
         const key = `health:${process.pid}:${Date.now()}`;
@@ -1058,16 +1055,11 @@ process.on('SIGTERM', async () => {
     process.exit(0);
 });
 
-// 🔥 Connect Redis on boot (non-blocking - server starts regardless)
-(async () => {
-    try {
-        await connectRedis();
-    } catch (err) {
-        logger.warn('⚠️ Redis connection failed on boot, will retry on first use:', err.message);
-    }
+// 🔥 Fire-and-forget Redis connect on boot (production-safe)
+connectRedis();
 
-    server.listen(PORT, () => {
-        logger.info(`
+server.listen(PORT, () => {
+    logger.info(`
 🚀 Matchingo Server Running! (v2.0 - Production)
 📡 Port: ${PORT}
 🌐 Client URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}
@@ -1078,6 +1070,6 @@ process.on('SIGTERM', async () => {
 🌍 Environment: ${NODE_ENV}
 📍 Platform: ${process.env.RENDER ? 'Render' : 'Local/VPS'}
     `);
-    });
-})();
+});
+
 
