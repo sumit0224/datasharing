@@ -229,8 +229,10 @@ function App() {
     }
 
     const formData = new FormData();
-    formData.append('file', file);
     formData.append('roomId', roomId);
+    formData.append('file', file);
+    if (guestId) formData.append('guestId', guestId);
+    if (deviceId) formData.append('deviceId', deviceId);
 
     setIsUploading(true);
     setUploadProgress(0);

@@ -396,3 +396,93 @@
 {"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T17:03:58.989Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T17:03:59.979Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T17:04:00.981Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T17:19:58.006Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T17:19:58.014Z"}
+{"level":"info","message":"Cleaning up uploads...","timestamp":"2026-01-28T17:21:16.431Z"}
+{"level":"info","message":"Cleanup complete.","timestamp":"2026-01-28T17:21:16.432Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.433Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"warn","message":"⚠️ Redis connection lost during cleanup (skipping)","timestamp":"2026-01-28T17:21:16.434Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n  ","timestamp":"2026-01-28T17:30:13.672Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T17:30:13.696Z"}
+{"level":"info","message":"✅ Redis Pub READY","timestamp":"2026-01-28T17:30:13.699Z"}
+{"level":"info","message":"🔄 Redis re-connected, ensuring adapter is attached...","timestamp":"2026-01-28T17:30:13.699Z"}
+{"level":"warn","message":"⚠️ Redis unavailable, running in single-instance mode","timestamp":"2026-01-28T17:30:13.699Z"}
+{"level":"info","message":"📡 Redis Sub: Connected (awaiting ready)","timestamp":"2026-01-28T17:30:13.717Z"}
+{"level":"info","message":"✅ Redis Sub READY","timestamp":"2026-01-28T17:30:13.718Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T17:30:13.719Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T17:30:14.020Z"}
+{"level":"info","message":"Cleaning up uploads...","timestamp":"2026-01-28T17:32:30.841Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n  ","timestamp":"2026-01-28T17:32:33.670Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T17:32:33.691Z"}
+{"level":"info","message":"✅ Redis Pub READY","timestamp":"2026-01-28T17:32:33.692Z"}
+{"level":"info","message":"🔄 Redis re-connected, ensuring adapter is attached...","timestamp":"2026-01-28T17:32:33.693Z"}
+{"level":"warn","message":"⚠️ Redis unavailable, running in single-instance mode","timestamp":"2026-01-28T17:32:33.693Z"}
+{"level":"info","message":"📡 Redis Sub: Connected (awaiting ready)","timestamp":"2026-01-28T17:32:33.698Z"}
+{"level":"info","message":"✅ Redis Sub READY","timestamp":"2026-01-28T17:32:33.699Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T17:32:33.699Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T17:32:34.002Z"}
+{"level":"info","message":"Cleaning up uploads...","timestamp":"2026-01-28T17:51:43.769Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n  ","timestamp":"2026-01-28T17:51:46.716Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T17:51:46.731Z"}
+{"level":"info","message":"✅ Redis Pub READY","timestamp":"2026-01-28T17:51:46.732Z"}
+{"level":"info","message":"🔄 Redis re-connected, ensuring adapter is attached...","timestamp":"2026-01-28T17:51:46.732Z"}
+{"level":"warn","message":"⚠️ Redis unavailable, running in single-instance mode","timestamp":"2026-01-28T17:51:46.732Z"}
+{"level":"info","message":"📡 Redis Sub: Connected (awaiting ready)","timestamp":"2026-01-28T17:51:46.749Z"}
+{"level":"info","message":"✅ Redis Sub READY","timestamp":"2026-01-28T17:51:46.750Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T17:51:46.750Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T17:51:47.062Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T17:59:23.316Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T17:59:23.338Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T17:59:23.346Z"}
+{"level":"info","message":"User disconnected: jGbZMdNWajLCT5TKAAAC","timestamp":"2026-01-28T17:59:23.428Z"}
+{"level":"info","message":"User logged in: ShadowTiger_413","timestamp":"2026-01-28T17:59:44.866Z"}
+{"level":"info","message":"User PEItJlBRRxbJqgWmAAAE left room local-room. Unique Devices: 0","timestamp":"2026-01-28T17:59:44.877Z"}
+{"level":"info","message":"User disconnected: PEItJlBRRxbJqgWmAAAE","timestamp":"2026-01-28T17:59:44.877Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T17:59:44.882Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T17:59:44.888Z"}
+{"level":"info","message":"Creating Private Room private-mkybyjas-wsdym with Expiry: 2026-01-28T18:29:54.249Z (in 30 mins)","timestamp":"2026-01-28T17:59:54.250Z"}
+{"level":"info","message":"User roms5rT-lmdL2UvNAAAG left room local-room. Unique Devices: 0","timestamp":"2026-01-28T17:59:54.270Z"}
+{"level":"info","message":"User disconnected: roms5rT-lmdL2UvNAAAG","timestamp":"2026-01-28T17:59:54.270Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T17:59:54.273Z"}
+{"level":"info","message":"User joined room: private-mkybyjas-wsdym | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T17:59:54.662Z"}
+{"level":"info","message":"User joined room: private-mkybyjas-wsdym | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T17:59:54.676Z"}
+{"level":"info","message":"Request to CLOSE room: private-mkybyjas-wsdym by 2Gvg-uIFL-C7AEuEAAAI","timestamp":"2026-01-28T18:00:02.001Z"}
+{"level":"info","message":"✅ Room private-mkybyjas-wsdym DESTROYED and closed.","timestamp":"2026-01-28T18:00:02.004Z"}
+{"level":"info","message":"User 2Gvg-uIFL-C7AEuEAAAI left room private-mkybyjas-wsdym. Unique Devices: 0","timestamp":"2026-01-28T18:00:02.043Z"}
+{"level":"info","message":"User disconnected: 2Gvg-uIFL-C7AEuEAAAI","timestamp":"2026-01-28T18:00:02.043Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T18:00:02.045Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T18:00:02.054Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:00:02.057Z"}
+{"level":"info","message":"User 41oi_BNeFOxdB-jMAAAK left room local-room. Unique Devices: 1","timestamp":"2026-01-28T18:00:02.059Z"}
+{"level":"info","message":"User disconnected: 41oi_BNeFOxdB-jMAAAK","timestamp":"2026-01-28T18:00:02.059Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:00:02.061Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:00:02.062Z"}
+{"level":"info","message":"Cleaning up uploads...","timestamp":"2026-01-28T18:01:30.830Z"}
+{"level":"info","message":"\n🚀 Matchingo Server Running! (v2.0 - Production)\n📡 Port: 3000\n🌐 Client URL: http://localhost:5173\n📦 Max File Size: 100MB\n⏰ Auto-cleanup: Texts (10min) | Files (2min)\n🔒 Security: Helmet, Rate Limiting, Compression\n📊 Redis: Disconnected (fallback mode)\n🌍 Environment: development\n📍 Platform: Local/VPS\n  ","timestamp":"2026-01-28T18:01:33.987Z"}
+{"level":"info","message":"📡 Redis Pub: Connected (awaiting ready)","timestamp":"2026-01-28T18:01:34.009Z"}
+{"level":"info","message":"✅ Redis Pub READY","timestamp":"2026-01-28T18:01:34.010Z"}
+{"level":"info","message":"🔄 Redis re-connected, ensuring adapter is attached...","timestamp":"2026-01-28T18:01:34.010Z"}
+{"level":"warn","message":"⚠️ Redis unavailable, running in single-instance mode","timestamp":"2026-01-28T18:01:34.010Z"}
+{"level":"info","message":"📡 Redis Sub: Connected (awaiting ready)","timestamp":"2026-01-28T18:01:34.022Z"}
+{"level":"info","message":"✅ Redis Sub READY","timestamp":"2026-01-28T18:01:34.023Z"}
+{"level":"info","message":"✅ Socket.IO Redis adapter attached","timestamp":"2026-01-28T18:01:34.023Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-28T18:01:34.323Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-28T18:01:36.074Z"}
+{"level":"info","message":"User joined room: local-room | Device: dev_jlcfw8i7emky22h64 | User: Guest","timestamp":"2026-01-28T18:01:36.086Z"}

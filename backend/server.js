@@ -30,7 +30,6 @@ const PORT = process.env.PORT || 3000;
 const NODE_ENV = (process.env.NODE_ENV || 'development').trim();
 const REDIS_URL = (process.env.REDIS_URL || 'redis://localhost:6379').trim();
 const MONGO_URI = process.env.MONGO_URI;
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
 
 // MongoDB Connection
 if (process.env.ENABLE_AUTH === 'true') {
@@ -43,21 +42,15 @@ if (process.env.ENABLE_AUTH === 'true') {
     }
 }
 
-// Serve static files from the uploads directory
-app.use('/uploads', express.static(UPLOAD_DIR));
-
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = /jpeg|jpg|png|gif|pdf|doc|docx|txt|zip|rar|mp3|mp4|mov|avi|ppt|pptx|xls|xlsx|csv|json|xml|html|css|js/;
-
 const TEXT_RETENTION_TIME = 10 * 60 * 1000;
 const FILE_RETENTION_TIME = 2 * 60 * 1000;
 const CLEANUP_INTERVAL = 30 * 1000;
 
-if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
 const { pubClient, subClient, connectRedis, isRedisReady, setClosing } = require('./redisClient');
+const S3Storage = require('./utils/s3Storage');
+const { getSignedDownloadUrl, deleteFile } = require('./utils/r2Client');
 
 // Room Snapshot Cache (Refresh Persistence)
 const roomSnapshotCache = new Map(); // roomId -> { texts, files, lastUpdated }
@@ -395,16 +388,7 @@ function generateRoomId(ip) {
     return `room-${ip.replace(/[:.]/g, '-').substring(0, 20)}`;
 }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, UPLOAD_DIR);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, `${uniqueSuffix}${ext}`);
-    }
-});
+const storage = S3Storage();
 
 const fileFilter = (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
@@ -500,9 +484,12 @@ app.post('/api/room/create', apiLimiter, async (req, res) => {
             meta.passwordHash = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
 
             if (expiresIn) {
-                const expiresAt = new Date(Date.now() + expiresIn * 60 * 1000);
-                meta.expiresAt = expiresAt.toISOString();
-                logger.info(`Creating Private Room ${roomId} with Expiry: ${meta.expiresAt} (in ${expiresIn} mins)`);
+                const minutes = Number(expiresIn);
+                if (!isNaN(minutes) && minutes > 0) {
+                    const expiresAt = new Date(Date.now() + minutes * 60 * 1000);
+                    meta.expiresAt = expiresAt.toISOString();
+                    logger.info(`Creating Private Room ${roomId} with Expiry: ${meta.expiresAt} (in ${minutes} mins)`);
+                }
             }
         }
 
@@ -539,48 +526,76 @@ app.post('/api/upload', uploadLimiter, upload.single('file'), async (req, res) =
         const fileInfo = {
             id: Date.now().toString(),
             originalName: req.file.originalname,
-            filename: req.file.filename,
+            key: req.file.key, // From S3Storage
             size: req.file.size,
             mimetype: req.file.mimetype,
             uploadedAt: new Date().toISOString(),
-            downloadUrl: `/uploads/${req.file.filename}`,
             sender
         };
+        // Update: Download URL points to API, which redirects to R2
+        fileInfo.downloadUrl = `/api/download/${fileInfo.id}?roomId=${roomId}`;
 
         room.files.push(fileInfo);
         await updateRoom(roomId, room);
 
         await broadcastRoomUpdate(roomId, 'file_shared', fileInfo);
 
-        logger.info(`File uploaded: ${fileInfo.originalName} to room ${roomId}`);
+        logger.info(`File uploaded: ${fileInfo.originalName} to room ${roomId} (Key: ${fileInfo.key})`);
 
         res.json({
             success: true,
             file: fileInfo
         });
-
-        if (!process.env.RENDER) {
-            fs.unlink(req.file.path, (err) => {
-                if (err) logger.error('File cleanup error:', err);
-                else logger.info('Local: Cleaned up file after upload');
-            });
-        } else {
-            logger.info('Render: Skipping immediate unlink for ephemeral persistence');
-        }
     } catch (err) {
         logger.error('Error in /api/upload:', err);
         res.status(500).json({ error: 'Upload failed' });
     }
 });
 
-app.get('/api/download/:filename', (req, res) => {
-    const { filename } = req.params;
-    const filePath = path.join(UPLOAD_DIR, filename);
+app.get('/api/download/:fileId', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const roomId = req.query.roomId; // Optional optimization if we passed it
 
-    if (fs.existsSync(filePath)) {
-        res.download(filePath);
-    } else {
-        res.status(404).json({ error: 'File not found' });
+        // We need to find the file metadata.
+        // Since we don't have a global file index in Redis (only inside rooms),
+        // we ideally need the roomId. 
+        // If the frontend doesn't pass roomId in the download URL, we have to search or use a global mapping.
+        // But wait, the frontend currently just links to `downloadUrl`. 
+        // I set `downloadUrl` to `/api/download/${fileInfo.id}`.
+        // Problem: Efficiently finding the R2 key from just fileId.
+        // Solution: The Prompt says "Lookup file metadata from Redis".
+        // Use `roomId` if available? 
+        // Actually, for now, let's look for the room in the Referer or rely on the frontend passing it? 
+        // Existing `downloadUrl` was static. 
+        // I will update the `downloadUrl` to include `?roomId=${roomId}`.
+
+        // Wait, I can't easily change the frontend to append query params if I just send `downloadUrl`.
+        // I CAN include it in the `downloadUrl` string I construct! 
+        // `downloadUrl: /api/download/${fileInfo.id}?roomId=${roomId}`
+
+        let targetFile;
+        // Search if roomId is provided
+        if (roomId) {
+            const room = await getRoom(roomId);
+            targetFile = room.files.find(f => f.id === fileId);
+        } else {
+            // Fallback: This is expensive if we don't have roomId. 
+            // But we can try to guess or return 400.
+            return res.status(400).json({ error: 'Missing roomId param' });
+        }
+
+        if (targetFile && targetFile.key) {
+            const signedUrl = await getSignedDownloadUrl(targetFile.key);
+            if (signedUrl) {
+                return res.redirect(signedUrl);
+            }
+        }
+
+        res.status(404).json({ error: 'File not found or expired' });
+    } catch (err) {
+        logger.error('Download error:', err);
+        res.status(500).json({ error: 'Internal Error' });
     }
 });
 
@@ -600,11 +615,15 @@ app.delete('/api/file/:fileId', apiLimiter, async (req, res) => {
             return res.status(404).json({ error: 'File not found' });
         }
 
-        const file = room.files[fileIndex];
-        const filePath = path.join(UPLOAD_DIR, file.filename);
+        if (fileIndex === -1) {
+            return res.status(404).json({ error: 'File not found' });
+        }
 
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+        const file = room.files[fileIndex];
+
+        // Async delete from R2 (fire and forget or await)
+        if (file.key) {
+            await deleteFile(file.key);
         }
 
         room.files.splice(fileIndex, 1);
@@ -867,14 +886,8 @@ async function cleanupOldData() {
                 });
 
                 filesToDelete.forEach(file => {
-                    const filePath = path.join(UPLOAD_DIR, file.filename);
-                    if (fs.existsSync(filePath)) {
-                        try {
-                            fs.unlinkSync(filePath);
-                            logger.info(`🗑️  Auto-deleted file: ${file.originalName}`);
-                        } catch (err) {
-                            logger.error(`Failed to delete file ${file.filename}:`, err);
-                        }
+                    if (file.key) {
+                        deleteFile(file.key).catch(err => logger.error('Cleanup R2 delete failed:', err));
                     }
                     io.to(roomId).emit('file_deleted', { id: file.id });
                 });
@@ -902,8 +915,14 @@ async function cleanupOldData() {
                         roomSnapshotCache.delete(roomId);
                         logger.info(`💀 Room ${roomId} expired and deleted`);
                     } else if (!meta || meta.type !== 'private') {
-                        // Public/Empty rooms cleanup logic (if desired, or keep snapshot for a while)
-                        roomSnapshotCache.delete(roomId);
+                        // Safety Check: If meta is missing but ID starts with 'private-',
+                        // it might be a Redis glitch. Do NOT delete from cache.
+                        if (!meta && roomId.startsWith('private-')) {
+                            // logger.debug(`Skipping cleanup for private room ${roomId} with missing meta`);
+                        } else {
+                            // Public/Empty rooms cleanup
+                            roomSnapshotCache.delete(roomId);
+                        }
                     }
                 }
             }
@@ -968,9 +987,8 @@ server.listen(PORT, () => {
 🚀 Matchingo Server Running! (v2.0 - Production)
 📡 Port: ${PORT}
 🌐 Client URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}
-📁 Uploads: ${UPLOAD_DIR}
 📦 Max File Size: ${MAX_FILE_SIZE / 1024 / 1024}MB
-⏰ Auto-cleanup: Texts (10min) | Files (2min)
+⏰ Auto-cleanup: Texts (${TEXT_RETENTION_TIME / 60000}min) | Files (${FILE_RETENTION_TIME / 60000}min)
 🔒 Security: Helmet, Rate Limiting, Compression
 📊 Redis: ${isRedisReady() ? 'Connected' : 'Disconnected (fallback mode)'}
 🌍 Environment: ${NODE_ENV}
