@@ -264,6 +264,15 @@ const authLimiter = {
     refresh: rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Too many refresh attempts' } })
 };
 
+// Rate limiter for manual Redis health checks (prevent abuse)
+const redisHealthLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // 10 requests per minute
+    message: { error: 'Too many health check requests' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(requestIp.mw());
@@ -433,35 +442,15 @@ app.get('/health/live', (req, res) => {
     });
 });
 
-// /health/ready - Readiness Check
-// Returns 503 ONLY if REQUIRE_REDIS=true AND Redis fails functional test
-app.get('/health/ready', async (req, res) => {
-    const requireRedis = process.env.REQUIRE_REDIS === 'true';
-    let redisFunctional = true;
-
-    if (requireRedis) {
-        redisFunctional = await checkRedisFunctional();
-    }
-
-    if (requireRedis && !redisFunctional) {
-        return res.status(503).json({
-            status: 'not_ready',
-            reason: 'Redis required but not functional',
-            redis: {
-                required: true,
-                functional: false
-            },
-            auth: {
-                enabled: process.env.ENABLE_AUTH === 'true'
-            }
-        });
-    }
-
+// /health/ready - Readiness Check (CHEAP - NO REDIS CALLS)
+// ⚠️ CRITICAL: Render calls this every 1-2 seconds
+// ❌ NEVER add Redis/DB checks here - use /health/redis for that
+app.get('/health/ready', (req, res) => {
     res.status(200).json({
         status: 'ready',
         redis: {
-            required: requireRedis,
-            functional: redisFunctional
+            required: process.env.REQUIRE_REDIS === 'true',
+            mode: 'external-check' // Use /health/redis for functional checks
         },
         auth: {
             enabled: process.env.ENABLE_AUTH === 'true'
@@ -471,10 +460,11 @@ app.get('/health/ready', async (req, res) => {
     });
 });
 
-// /health/redis - Pure Functional Redis Verification
-// ❌ NEVER checks socket state
-// ✅ ONLY validates actual operations
-app.get('/health/redis', async (req, res) => {
+// /health/redis - Pure Functional Redis Verification (MANUAL CHECKS ONLY)
+// ⚠️ DO NOT configure Render to call this endpoint
+// ✅ Use for: UptimeRobot, Grafana, manual curl, alerts
+// ❌ NEVER checks socket state / ✅ ONLY validates actual operations (SET + GET)
+app.get('/health/redis', redisHealthLimiter, async (req, res) => {
     const functional = await checkRedisFunctional();
 
     if (functional) {
