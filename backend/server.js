@@ -260,8 +260,8 @@ const uploadLimiter = rateLimit({
 
 const authLimiter = {
     register: rateLimit({ windowMs: 60 * 1000, max: 3, message: { error: 'Too many registration attempts' } }),
-    login: rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Too many login attempts' } }),
-    refresh: rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Too many refresh attempts' } })
+    login: rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Too many login attempts' } }),
+    refresh: rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: 'Too many refresh attempts' } }) // Increased from 10
 };
 
 // Rate limiter for manual Redis health checks (prevent abuse)

@@ -91,8 +91,9 @@ async function login(req, res) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        user.lastLoginAt = new Date();
-        await user.save();
+        // Performance optimization: Skip lastLoginAt update (non-critical)
+        // user.lastLoginAt = new Date();
+        // await user.save();
 
         const accessToken = signAccessToken(user);
         const refreshToken = signRefreshToken(user);
@@ -140,7 +141,6 @@ async function refreshToken(req, res) {
         const user = await User.findById(payload.sub);
 
         // Hardening: Token reuse protection
-        // If the token was issued BEFORE the last refresh, it's reused/stolen -> BLOCK
         if (!user) return res.status(401).json({ error: 'User not found' });
 
         // Allow 1 second clock skew
@@ -149,9 +149,10 @@ async function refreshToken(req, res) {
             return res.status(403).json({ error: 'Invalid token' });
         }
 
-        // Update refresh timestamp
-        user.lastRefreshAt = new Date();
-        await user.save();
+        // Performance optimization: Update timestamp async (non-blocking)
+        User.findByIdAndUpdate(user._id, { lastRefreshAt: new Date() }).catch(err => {
+            logger.warn('Failed to update lastRefreshAt:', err.message);
+        });
 
         const newAccessToken = signAccessToken(user);
         const newRefreshToken = signRefreshToken(user);
