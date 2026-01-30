@@ -85,9 +85,9 @@ const LandingPage = () => {
                             Local P2P Sharing
                         </div>
 
-                        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6 leading-[1.1]">
+                        <h1 className="text-5xl md:text-7xl font-bold tracking-wider text-white mb-6 leading-[1.1] font-orbitron">
                             Share freely. <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-200">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-200 drop-shadow-[0_0_15px_rgba(32,178,170,0.5)]">
                                 No Internet needed.
                             </span>
                         </h1>
