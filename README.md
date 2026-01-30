@@ -1,4 +1,5 @@
-# Matchingo - Wi-Fi Based Data & File Sharing
+# Wifi Sharing
+ - Wi-Fi Based Data & File Sharing
 
 Matchingo is a modern, light-themed web application that allows users on the same Wi-Fi network to share text and files instantly without any login or setup.
 

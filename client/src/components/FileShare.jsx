@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import PropTypes from 'prop-types';
 
-const FileShare = React.memo(({ files, onUpload, isUploading, uploadProgress, isConnected }) => {
+const FileShare = React.memo(({ files, onUpload, onDeleteFile, isUploading, uploadProgress, isConnected }) => {
     const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles?.length > 0 && isConnected) {
             onUpload(acceptedFiles[0]);
@@ -132,16 +132,28 @@ const FileShare = React.memo(({ files, onUpload, isUploading, uploadProgress, is
                                             </p>
                                         </div>
                                     </div>
-                                    <a
-                                        href={`${downloadUrl}${file.downloadUrl}`}
-                                        download
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex-shrink-0 ml-3 px-8 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed text-sm py-1.5 px-4"
-                                        aria-label={`Download ${file.originalName}`}
-                                    >
-                                        Download
-                                    </a>
+                                    <div className="flex items-center gap-2">
+                                        <a
+                                            href={`${downloadUrl}${file.downloadUrl}`}
+                                            download
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-shrink-0 px-4 py-1.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-xs"
+                                            aria-label={`Download ${file.originalName}`}
+                                        >
+                                            Download
+                                        </a>
+                                        <button
+                                            onClick={() => onDeleteFile(file.id)}
+                                            className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all"
+                                            title="Delete file"
+                                            aria-label={`Delete ${file.originalName}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -162,12 +174,12 @@ FileShare.propTypes = {
     files: PropTypes.arrayOf(PropTypes.shape({
         id: PropTypes.string.isRequired,
         originalName: PropTypes.string.isRequired,
-        filename: PropTypes.string.isRequired,
         size: PropTypes.number.isRequired,
         uploadedAt: PropTypes.string.isRequired,
         downloadUrl: PropTypes.string.isRequired
     })).isRequired,
     onUpload: PropTypes.func.isRequired,
+    onDeleteFile: PropTypes.func.isRequired,
     isUploading: PropTypes.bool.isRequired,
     uploadProgress: PropTypes.number.isRequired,
     isConnected: PropTypes.bool.isRequired
