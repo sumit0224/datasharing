@@ -205,6 +205,10 @@ app.get('/api/room/:roomId', apiLimiter, async (req, res) => {
     }
 });
 
+const PushToken = require('./models/PushToken');
+const { Expo } = require('expo-server-sdk');
+const expo = new Expo();
+
 app.post('/api/room/create', apiLimiter, async (req, res) => {
     try {
         const { expiresIn } = req.body;
@@ -230,6 +234,71 @@ app.post('/api/room/create', apiLimiter, async (req, res) => {
     } catch (err) {
         logger.error('Error creating room:', err);
         res.status(500).json({ error: 'Failed to create room' });
+    }
+});
+
+// --- PUSH NOTIFICATIONS ---
+
+app.post('/api/notifications/register', async (req, res) => {
+    try {
+        const { token, deviceId } = req.body;
+
+        if (!Expo.isExpoPushToken(token)) {
+            return res.status(400).json({ error: 'Invalid Expo Push Token' });
+        }
+
+        await PushToken.findOneAndUpdate(
+            { token },
+            { token, deviceId, lastUsed: new Date() },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        logger.error('Error registering push token:', err);
+        res.status(500).json({ error: 'Failed to register token' });
+    }
+});
+
+app.post('/api/notifications/broadcast', async (req, res) => {
+    try {
+        const { title, body } = req.body;
+
+        // Simple security check (replace with real auth in production)
+        // const { secret } = req.headers;
+        // if (secret !== process.env.ADMIN_SECRET) return res.sendStatus(401);
+
+        const tokens = await PushToken.find().distinct('token');
+        if (tokens.length === 0) return res.json({ message: 'No devices registered' });
+
+        const messages = [];
+        for (let token of tokens) {
+            if (!Expo.isExpoPushToken(token)) continue;
+            messages.push({
+                to: token,
+                sound: 'default',
+                title: title || 'New Notification',
+                body: body || 'You have a new message!',
+                data: { withSome: 'data' },
+            });
+        }
+
+        const chunks = expo.chunkPushNotifications(messages);
+        const tickets = [];
+
+        for (let chunk of chunks) {
+            try {
+                const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+                tickets.push(...ticketChunk);
+            } catch (error) {
+                logger.error('Error sending chunks:', error);
+            }
+        }
+
+        res.json({ success: true, count: tokens.length, tickets });
+    } catch (err) {
+        logger.error('Error broadcasting notification:', err);
+        res.status(500).json({ error: 'Failed to send notifications' });
     }
 });
 

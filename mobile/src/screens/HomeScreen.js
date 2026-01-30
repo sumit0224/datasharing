@@ -21,6 +21,7 @@ import NotificationBanner from '../components/NotificationBanner';
 import { createSocket } from '../services/socket';
 import api, { API_URL } from '../services/api';
 import { getDeviceId, getGuestId } from '../utils/identity';
+import { registerForPushNotificationsAsync } from '../services/notifications';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -53,12 +54,23 @@ export default function HomeScreen() {
             }
         });
 
-        // Initialize identity
+        // Initialize identity & Notifications
         const initIdentity = async () => {
             const dId = await getDeviceId();
             const gId = await getGuestId();
             setDeviceId(dId);
             setGuestId(gId);
+
+            // Register for Push Notifications
+            const token = await registerForPushNotificationsAsync();
+            if (token) {
+                try {
+                    await api.post('/api/notifications/register', { token, deviceId: dId });
+                    console.log('Push token registered with backend');
+                } catch (err) {
+                    console.error('Failed to send push token to backend:', err);
+                }
+            }
         };
         initIdentity();
 

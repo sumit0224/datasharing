@@ -998,3 +998,10 @@
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T07:55:38.607Z"}
 {"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-30T07:55:38.701Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T07:55:38.957Z"}
+{"level":"info","message":"🚀 Server running on port 3000","timestamp":"2026-01-30T08:18:57.874Z"}
+{"level":"info","message":"🌍 Environment: development","timestamp":"2026-01-30T08:18:57.876Z"}
+{"level":"info","message":"💾 Database: MongoDB","timestamp":"2026-01-30T08:18:57.876Z"}
+{"level":"info","message":"🗄️ Storage: Cloudflare R2","timestamp":"2026-01-30T08:18:57.876Z"}
+{"level":"info","message":"🧠 Real-Time: In-Memory Adapter","timestamp":"2026-01-30T08:18:57.876Z"}
+{"level":"info","message":"⏱️ Text Expiry: 10 Minutes | File Expiry: 2 Minutes","timestamp":"2026-01-30T08:18:57.876Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-30T08:18:58.228Z"}

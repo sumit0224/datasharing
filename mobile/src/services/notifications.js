@@ -11,7 +11,9 @@ Notifications.setNotificationHandler({
     }),
 });
 
-export async function requestNotificationPermissions() {
+export async function registerForPushNotificationsAsync() {
+    let token;
+
     if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
             name: 'default',
@@ -29,7 +31,23 @@ export async function requestNotificationPermissions() {
         finalStatus = status;
     }
 
-    return finalStatus === 'granted';
+    if (finalStatus !== 'granted') {
+        console.log('Failed to get push token for push notification!');
+        return null;
+    }
+
+    // Get the token
+    try {
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+            // projectId: '...' // Usually automatically inferred from app.json/eas.json
+        });
+        token = tokenData.data;
+        console.log('Expo Push Token:', token);
+    } catch (e) {
+        console.error('Error fetching push token:', e);
+    }
+
+    return token;
 }
 
 export async function sendLocalNotification(title, body) {
