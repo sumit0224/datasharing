@@ -70,7 +70,7 @@ const Logo = ({ className = "w-10 h-10" }) => {
                 </svg>
             </div>
             <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 bg-clip-text text-transparent">
-                Wifi Sharing
+                Wifi Share
             </span>
         </div>
     );

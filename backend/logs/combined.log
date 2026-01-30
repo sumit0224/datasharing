@@ -1005,3 +1005,7 @@
 {"level":"info","message":"🧠 Real-Time: In-Memory Adapter","timestamp":"2026-01-30T08:18:57.876Z"}
 {"level":"info","message":"⏱️ Text Expiry: 10 Minutes | File Expiry: 2 Minutes","timestamp":"2026-01-30T08:18:57.876Z"}
 {"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-30T08:18:58.228Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T08:44:23.172Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T08:44:23.249Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T08:46:22.446Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T08:46:22.531Z"}
