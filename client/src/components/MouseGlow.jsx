@@ -20,7 +20,7 @@ const MouseGlow = () => {
             aria-hidden="true"
         >
             <div
-                className="absolute rounded-full bg-purple-500/20 blur-[100px] transition-transform duration-75 ease-out"
+                className="absolute rounded-full bg-[#20B2AA]/20 blur-[100px] transition-transform duration-75 ease-out"
                 style={{
                     width: '400px',
                     height: '400px',

@@ -12,9 +12,8 @@ const Logo = ({ className = "w-10 h-10" }) => {
                 >
                     <defs>
                         <linearGradient id="logo-gradient-v2" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#818cf8" />
-                            <stop offset="50%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#4f46e5" />
+                            <stop offset="0%" stopColor="#ffffff" />
+                            <stop offset="100%" stopColor="#e5e7eb" />
                         </linearGradient>
                         <filter id="logo-glow-v2" x="-20%" y="-20%" width="140%" height="140%">
                             <feGaussianBlur stdDeviation="1.5" result="blur" />
@@ -46,8 +45,8 @@ const Logo = ({ className = "w-10 h-10" }) => {
                         strokeWidth="7"
                         strokeLinecap="round"
                     />
-                    <circle cx="30" cy="55" r="3" fill="#4f46e5" />
-                    <circle cx="70" cy="55" r="3" fill="#4f46e5" />
+                    <circle cx="30" cy="55" r="3" fill="#ffffff" />
+                    <circle cx="70" cy="55" r="3" fill="#ffffff" />
 
                     <path
                         d="M20 40 C35 25 65 25 80 40"
@@ -56,8 +55,8 @@ const Logo = ({ className = "w-10 h-10" }) => {
                         strokeLinecap="round"
                         strokeOpacity="0.7"
                     />
-                    <circle cx="20" cy="40" r="3" fill="#6366f1" />
-                    <circle cx="80" cy="40" r="3" fill="#6366f1" />
+                    <circle cx="20" cy="40" r="3" fill="#ffffff" />
+                    <circle cx="80" cy="40" r="3" fill="#ffffff" />
 
                     <path
                         d="M10 25 C30 5 70 5 90 25"
@@ -69,7 +68,7 @@ const Logo = ({ className = "w-10 h-10" }) => {
 
                 </svg>
             </div>
-            <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-2xl font-black tracking-tighter text-white">
                 Wifi Share
             </span>
         </div>

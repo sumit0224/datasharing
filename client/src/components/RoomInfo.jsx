@@ -6,14 +6,14 @@ const RoomInfo = React.memo(({ roomId, userCount, onCopyRoom, onCloseRoom, isPri
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-4 md:gap-6 text-sm">
                 <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Room:</span>
-                    <code className="bg-gray-100 px-3 py-1 rounded-md font-mono text-xs text-gray-800 select-all">
-                        {roomId || <span className="bg-gray-200 animate-pulse rounded w-20 h-4 inline-block"></span>}
+                    <span className="text-gray-400 uppercase text-xs font-bold tracking-wider">Room:</span>
+                    <code className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg font-mono text-sm text-[#20B2AA] font-bold select-all tracking-wide">
+                        {roomId || <span className="bg-white/10 animate-pulse rounded w-20 h-4 inline-block"></span>}
                     </code>
                     {roomId && (
                         <button
                             onClick={() => onCopyRoom(roomId)}
-                            className="p-2 rounded transition-all text-gray-600 hover:text-gray-900 hover:bg-gray-200"
+                            className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-white/10 active:scale-95"
                             title="Copy Room ID"
                             aria-label="Copy room ID to clipboard"
                         >
@@ -24,8 +24,8 @@ const RoomInfo = React.memo(({ roomId, userCount, onCopyRoom, onCloseRoom, isPri
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Online:</span>
-                    <span className="font-semibold text-green-600" aria-label={`${userCount} users online`}>
+                    <span className="text-gray-400 uppercase text-xs font-bold tracking-wider">Online:</span>
+                    <span className="font-bold text-[#20B2AA] bg-[#20B2AA]/10 px-2 py-0.5 rounded-md border border-[#20B2AA]/20" aria-label={`${userCount} users online`}>
                         {userCount}
                     </span>
                 </div>
@@ -34,7 +34,7 @@ const RoomInfo = React.memo(({ roomId, userCount, onCopyRoom, onCloseRoom, isPri
             {roomId && isPrivate && (
                 <button
                     onClick={onCloseRoom}
-                    className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors font-medium flex items-center gap-1"
+                    className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/20 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1"
                     title="Destroy this room"
                 >
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

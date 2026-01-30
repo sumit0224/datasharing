@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -325,44 +326,44 @@ function WebApp() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <ToastContainer {...toastOptions} />
+        <div className="min-h-screen bg-black text-white selection:bg-[#20B2AA]/30">
+            <ToastContainer {...toastOptions} theme="dark" />
 
-            <header className="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+            <header className="bg-black/80 border-b border-white/5 py-4 px-6 sticky top-0 z-50 backdrop-blur-xl">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Logo className="w-8 h-8 md:w-10 md:h-10" />
+                        <Logo className="w-8 h-8 md:w-10 md:h-10 text-white" />
                         <div className="flex items-center gap-3 ml-4">
                             {isConnected ? (
-                                <span className="flex items-center gap-1 text-xs text-green-600" title="Connected">
-                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                <span className="flex items-center gap-2 text-xs text-[#20B2AA] font-medium tracking-wide bg-[#20B2AA]/10 px-2 py-1 rounded-full border border-[#20B2AA]/20" title="Connected">
+                                    <span className="w-1.5 h-1.5 bg-[#20B2AA] rounded-full animate-pulse shadow-[0_0_8px_#20B2AA]"></span>
                                     Connected
                                 </span>
                             ) : (
-                                <span className="flex items-center gap-1 text-xs text-red-600" title="Disconnected">
-                                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                                <span className="flex items-center gap-2 text-xs text-red-500 font-medium tracking-wide bg-red-500/10 px-2 py-1 rounded-full border border-red-500/20" title="Disconnected">
+                                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
                                     Disconnected
                                 </span>
                             )}
                         </div>
                     </div>
-                    <nav className="hidden md:flex items-center gap-4 text-sm text-gray-600" role="navigation" aria-label="Main navigation">
+                    <nav className="hidden md:flex items-center gap-4 text-xs font-bold uppercase tracking-wider" role="navigation" aria-label="Main navigation">
                         <button
                             onClick={() => setShowJoinModal(true)}
-                            className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition shadow-sm font-medium"
+                            className="px-5 py-2.5 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 transition border border-white/5 hover:text-white"
                         >
                             Join Room
                         </button>
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition shadow-sm font-medium"
+                            className="px-5 py-2.5 bg-[#20B2AA] text-black rounded-xl hover:bg-[#1C9D96] transition shadow-[0_0_15px_-3px_rgba(32,178,170,0.3)] hover:shadow-[0_0_20px_-3px_rgba(32,178,170,0.5)] active:scale-95 duration-200"
                         >
                             + New Room
                         </button>
                     </nav>
 
                     <button
-                        className="md:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+                        className="md:hidden p-2 text-gray-400 hover:text-white focus:outline-none"
                         onClick={() => setShowMobileMenu(!showMobileMenu)}
                         aria-label="Toggle mobile menu"
                     >
@@ -379,17 +380,17 @@ function WebApp() {
                 </div>
 
                 {showMobileMenu && (
-                    <div className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-xl z-50 animate-in slide-in-from-top-2 duration-200">
+                    <div className="md:hidden absolute top-full left-0 right-0 bg-[#0A0A0A] border-b border-white/5 shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200">
                         <div className="flex flex-col p-4 space-y-3">
                             <button
                                 onClick={() => { setShowJoinModal(true); setShowMobileMenu(false); }}
-                                className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg font-medium text-gray-700 transition"
+                                className="w-full text-left px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-medium text-gray-200 transition"
                             >
                                 Join Room
                             </button>
                             <button
                                 onClick={() => { setShowCreateModal(true); setShowMobileMenu(false); }}
-                                className="w-full text-left px-4 py-3 bg-black text-white hover:bg-gray-800 rounded-lg font-medium transition shadow-sm"
+                                className="w-full text-left px-4 py-3 bg-[#20B2AA] text-black hover:bg-[#1C9D96] rounded-xl font-bold transition shadow-lg"
                             >
                                 + New Room
                             </button>
@@ -398,8 +399,9 @@ function WebApp() {
                 )}
             </header>
 
-            <div className="bg-white border-b border-gray-200 py-3 px-6 slide-down">
-                <div className="max-w-7xl mx-auto">
+            <div className="bg-black border-b border-white/5 py-4 px-6 relative overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[#20B2AA]/5 rounded-full blur-[100px] pointer-events-none" />
+                <div className="max-w-7xl mx-auto relative z-10">
                     <RoomInfo
                         roomId={roomId}
                         userCount={userCount}
@@ -410,33 +412,39 @@ function WebApp() {
                 </div>
             </div>
 
-            <main className="max-w-4xl mx-auto px-4 py-12">
-                <div className="flex gap-4 mb-6" role="tablist" aria-label="Content tabs">
+            <main className="max-w-4xl mx-auto px-4 py-12 relative z-10">
+                <div className="flex gap-4 mb-8 p-1 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm" role="tablist" aria-label="Content tabs">
                     <button
                         role="tab"
                         aria-selected={activeTab === 'text'}
                         onClick={() => handleTabChange('text')}
-                        className={`flex-1 justify-center flex items-center gap-2 px-6 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 ${activeTab === 'text'
-                            ? 'bg-white shadow-md border border-gray-200 text-gray-900'
-                            : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        className={`flex-1 justify-center flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${activeTab === 'text'
+                            ? 'bg-[#20B2AA] text-black shadow-lg shadow-[#20B2AA]/20 font-bold'
+                            : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
-                        Text
+                        <svg className={`w-5 h-5 ${activeTab === 'text' ? 'text-black' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        Text Chat
                     </button>
                     <button
                         role="tab"
                         aria-selected={activeTab === 'files'}
                         onClick={() => handleTabChange('files')}
-                        className={`flex-1 justify-center flex items-center gap-2 px-6 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 ${activeTab === 'files'
-                            ? 'bg-white shadow-md border border-gray-200 text-gray-900'
-                            : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        className={`flex-1 justify-center flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${activeTab === 'files'
+                            ? 'bg-[#20B2AA] text-black shadow-lg shadow-[#20B2AA]/20 font-bold'
+                            : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
-                        Files
+                        <svg className={`w-5 h-5 ${activeTab === 'files' ? 'text-black' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        File Transfer
                     </button>
                 </div>
 
-                <div className="fade-in">
+                <div className="fade-in min-h-[400px]">
                     {activeTab === 'text' ? (
                         <div id="text-panel">
                             <TextShare
@@ -462,8 +470,14 @@ function WebApp() {
                 </div>
             </main>
 
-            <footer className="text-center py-6 text-sm text-gray-500">
-                <p>© {new Date().getFullYear()} Wifi Sharing</p>
+            <footer className="py-8 text-xs text-center border-t border-white/5 mt-auto">
+                <div className="flex flex-col gap-2">
+                    <p className="text-gray-500">© {new Date().getFullYear()} P2P Local. Secure Local Transfer.</p>
+                    <div className="flex justify-center gap-4 text-gray-600">
+                        <Link to="/privacy" className="hover:text-[#20B2AA] transition-colors">Privacy</Link>
+                        <Link to="/terms" className="hover:text-[#20B2AA] transition-colors">Terms</Link>
+                    </div>
+                </div>
             </footer>
 
             <CreateRoomModal
