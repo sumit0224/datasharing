@@ -247,6 +247,9 @@ const uploadMiddleware = multer({ storage, limits: { fileSize: MAX_FILE_SIZE }, 
 
 app.post('/api/upload', uploadLimiter, uploadMiddleware.single('file'), async (req, res) => {
     try {
+        const source = req.headers['x-client-source'] || 'unknown';
+        logger.info(`📤 File upload request from: ${source}`);
+
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
         const roomId = req.body.roomId || 'local-room';

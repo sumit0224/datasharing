@@ -160,7 +160,11 @@ export default function HomeScreen() {
 
     const handleUploadFile = useCallback(async (file) => {
         if (!isConnected) {
-
+            Toast.show({
+                type: 'error',
+                text1: 'No Connection',
+                text2: 'Connect to server to upload files',
+            });
             return;
         }
 
@@ -179,7 +183,7 @@ export default function HomeScreen() {
         try {
             await api.post('/api/upload', formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
+                    'x-client-source': 'mobile',
                 },
             });
             Toast.show({

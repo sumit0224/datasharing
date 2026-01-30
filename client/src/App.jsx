@@ -234,6 +234,10 @@ function App() {
 
     try {
       await api.post(`${SOCKET_URL}/api/upload`, formData, {
+        headers: {
+          'Content-Type': undefined, // Let browser set boundary
+          'x-client-source': 'web'
+        },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);

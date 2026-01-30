@@ -988,3 +988,13 @@
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:58:28.330Z"}
 {"level":"info","message":"🗑️ R2: Deleted object rooms/room-103-68-31/1769756992004-72278171.png","timestamp":"2026-01-30T07:12:12.263Z"}
 {"level":"info","message":"🗑️ Cleaned 1 expired file(s) from room room-103-68-31","timestamp":"2026-01-30T07:12:12.311Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T07:55:24.629Z"}
+{"level":"info","message":"🚀 Server running on port 3000","timestamp":"2026-01-30T07:55:38.357Z"}
+{"level":"info","message":"🌍 Environment: development","timestamp":"2026-01-30T07:55:38.359Z"}
+{"level":"info","message":"💾 Database: MongoDB","timestamp":"2026-01-30T07:55:38.359Z"}
+{"level":"info","message":"🗄️ Storage: Cloudflare R2","timestamp":"2026-01-30T07:55:38.359Z"}
+{"level":"info","message":"🧠 Real-Time: In-Memory Adapter","timestamp":"2026-01-30T07:55:38.359Z"}
+{"level":"info","message":"⏱️ Text Expiry: 10 Minutes | File Expiry: 2 Minutes","timestamp":"2026-01-30T07:55:38.359Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T07:55:38.607Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-30T07:55:38.701Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T07:55:38.957Z"}
