@@ -118,7 +118,7 @@ async function broadcastRoomUpdate(roomId, eventName, payload) {
 // --- SOCKET.IO ---
 const io = new Server(server, {
     cors: {
-        origin: (process.env.CLIENT_URL || 'http://localhost:5173').trim(),
+        origin: '*', // Allow all origins for development (mobile app compatibility)
         methods: ['GET', 'POST'],
         credentials: true
     },
@@ -134,7 +134,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: (process.env.CLIENT_URL || 'http://localhost:5173').trim(),
+    origin: '*', // Allow all origins for development (mobile app compatibility)
     credentials: true
 }));
 

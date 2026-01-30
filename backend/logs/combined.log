@@ -951,3 +951,40 @@
 {"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-30T05:54:12.300Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T05:54:13.737Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T05:54:13.798Z"}
+{"address":"::","code":"EADDRINUSE","errno":-48,"level":"error","message":"Uncaught Exception: listen EADDRINUSE: address already in use :::3000","port":3000,"stack":"Error: listen EADDRINUSE: address already in use :::3000\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at Server.listen (node:net:2102:7)\n    at /Users/harshvardhan/Desktop/backend/airForShare/backend/server.js:543:16\n    at Object.<anonymous> (/Users/harshvardhan/Desktop/backend/airForShare/backend/server.js:555:3)\n    at Module._compile (node:internal/modules/cjs/loader:1761:14)\n    at Object..js (node:internal/modules/cjs/loader:1893:10)\n    at Module.load (node:internal/modules/cjs/loader:1481:32)\n    at Module._load (node:internal/modules/cjs/loader:1300:12)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)","syscall":"listen","timestamp":"2026-01-30T06:10:20.279Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-30T06:10:20.759Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:19:09.324Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:20:41.730Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:22:33.294Z"}
+{"level":"info","message":"🗑️ Attempting to delete text 697c4e5898b2ee857a6d34a7 in room room-192-168-1","timestamp":"2026-01-30T06:23:22.777Z"}
+{"level":"info","message":"✅ Successfully deleted text: 697c4e5898b2ee857a6d34a7","timestamp":"2026-01-30T06:23:22.817Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:27:40.401Z"}
+{"level":"info","message":"🗑️ Attempting to delete text 697c4eeb98b2ee857a6d34af in room room-192-168-1","timestamp":"2026-01-30T06:27:43.633Z"}
+{"level":"info","message":"✅ Successfully deleted text: 697c4eeb98b2ee857a6d34af","timestamp":"2026-01-30T06:27:43.670Z"}
+{"level":"info","message":"File uploaded: IMG-20260130-WA0000.jpg to room room-192-168-1","timestamp":"2026-01-30T06:27:59.363Z"}
+{"level":"info","message":"🗑️ Attempting to delete text 697c4f6698b2ee857a6d34ba in room room-192-168-1","timestamp":"2026-01-30T06:29:55.336Z"}
+{"level":"info","message":"✅ Successfully deleted text: 697c4f6698b2ee857a6d34ba","timestamp":"2026-01-30T06:29:55.381Z"}
+{"level":"info","message":"🗑️ R2: Deleted object rooms/room-192-168-1/1769754478042-183575329.jpg","timestamp":"2026-01-30T06:30:01.173Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:30:48.671Z"}
+{"level":"info","message":"🗑️ Attempting to delete text 697c501d98b2ee857a6d34cd in room room-192-168-1","timestamp":"2026-01-30T06:31:06.555Z"}
+{"level":"info","message":"✅ Successfully deleted text: 697c501d98b2ee857a6d34cd","timestamp":"2026-01-30T06:31:06.590Z"}
+{"level":"info","message":"File uploaded: IMG-20260130-WA0000.jpg to room room-192-168-1","timestamp":"2026-01-30T06:33:11.750Z"}
+{"level":"info","message":"🗑️ R2: Deleted object rooms/room-192-168-1/1769754790991-634831057.jpg","timestamp":"2026-01-30T06:35:12.167Z"}
+{"level":"info","message":"🗑️ Cleaned 1 expired file(s) from room room-192-168-1","timestamp":"2026-01-30T06:35:12.202Z"}
+{"level":"info","message":"File uploaded: IMG-20260130-WA0000.jpg to room room-192-168-1","timestamp":"2026-01-30T06:37:51.851Z"}
+{"level":"info","message":"🗑️ R2: Deleted object rooms/room-192-168-1/1769755071287-670112867.jpg","timestamp":"2026-01-30T06:39:52.768Z"}
+{"level":"info","message":"🗑️ Cleaned 1 expired file(s) from room room-192-168-1","timestamp":"2026-01-30T06:39:52.824Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:41:43.412Z"}
+{"level":"info","message":"File uploaded: IMG-20260130-WA0000.jpg to room room-192-168-1","timestamp":"2026-01-30T06:42:00.188Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:43:23.106Z"}
+{"level":"info","message":"🗑️ R2: Deleted object rooms/room-192-168-1/1769755319631-147177359.jpg","timestamp":"2026-01-30T06:44:12.185Z"}
+{"level":"info","message":"🗑️ Cleaned 1 expired file(s) from room room-192-168-1","timestamp":"2026-01-30T06:44:12.228Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:45:05.938Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:49:09.074Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:50:18.797Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:51:07.086Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:51:11.854Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:53:57.522Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T06:58:28.330Z"}
+{"level":"info","message":"🗑️ R2: Deleted object rooms/room-103-68-31/1769756992004-72278171.png","timestamp":"2026-01-30T07:12:12.263Z"}
+{"level":"info","message":"🗑️ Cleaned 1 expired file(s) from room room-103-68-31","timestamp":"2026-01-30T07:12:12.311Z"}

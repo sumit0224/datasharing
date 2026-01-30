@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "WiFi Share",
+    "slug": "wifi-share",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#111827"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wifishare.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#111827"
+      },
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "NOTIFICATIONS"
+      ],
+      "package": "com.wifishare.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f0574ef9-99a3-4263-b96b-7f65a0c6662f"
+      }
+    }
+  }
+}
