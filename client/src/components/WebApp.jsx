@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import io from 'socket.io-client';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -13,14 +13,6 @@ import api from '../api';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-function createSocket() {
-    return io(SOCKET_URL, {
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5
-    });
-}
-
 function WebApp() {
     const [roomId, setRoomId] = useState('');
     const [userCount, setUserCount] = useState(0);
@@ -31,8 +23,10 @@ function WebApp() {
     const [activeTab, setActiveTab] = useState('text');
     const [isConnected, setIsConnected] = useState(false);
 
-    // Socket Reference
-    const socketRef = React.useRef(null);
+    // Refs for stable state access in listeners
+    const socketRef = useRef(null);
+    const processedIdsRef = useRef(new Set()); // Deduplication
+    const sessionStartTime = useRef(Date.now()); // Session start timestamp
 
     // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -64,13 +58,13 @@ function WebApp() {
         hideProgressBar: false
     }), []);
 
+    // Fetch initial room info (REST API)
     const fetchRoomInfo = useCallback(async () => {
         try {
             const { data } = await api.get(`${SOCKET_URL}/api/room-info`);
             setRoomId(data.roomId);
-            if (socketRef.current) {
-                socketRef.current.emit('join_room', data.roomId, deviceId, guestId);
-            }
+            // We do NOT manually emit join_room here anymore; 
+            // the socket connection effect handles joining based on roomId state.
         } catch (error) {
             console.error('Failed to fetch room info:', error);
             if (error.response?.status === 429) {
@@ -79,86 +73,144 @@ function WebApp() {
                 toast.error('Failed to connect to room server.', toastOptions);
             }
         }
-    }, [deviceId, guestId, toastOptions]);
+    }, [toastOptions]);
 
+    // 1. Socket Initialization & Lifecycle Effect
     useEffect(() => {
-        if (socketRef.current) {
-            socketRef.current.disconnect();
+        // Initialize Socket only once
+        if (!socketRef.current) {
+            socketRef.current = io(SOCKET_URL, {
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 10,
+                transports: ['websocket', 'polling']
+            });
         }
-        socketRef.current = createSocket();
         const socket = socketRef.current;
 
-        const handleConnect = () => {
-            console.log('Connected to server');
+        const onConnect = () => {
+            console.log('✅ Socket Connected:', socket.id);
             setIsConnected(true);
-            if (roomId) {
-                socket.emit('join_room', roomId, deviceId, guestId);
-            } else {
-                fetchRoomInfo();
-            }
         };
 
-        const handleDisconnect = () => {
-            console.log('Disconnected from server');
+        const onDisconnect = () => {
+            console.log('❌ Socket Disconnected');
             setIsConnected(false);
-            toast.warning('Connection lost. Attempting to reconnect...', toastOptions);
+            toast.warning('Connection lost. Reconnecting...', toastOptions);
         };
 
+        socket.on('connect', onConnect);
+        socket.on('disconnect', onDisconnect);
+
+        // Fetch initial room info on mount if needed
+        fetchRoomInfo();
+
+        return () => {
+            socket.off('connect', onConnect);
+            socket.off('disconnect', onDisconnect);
+            socket.disconnect();
+            socketRef.current = null;
+        };
+    }, []); // Run ONCE on mount
+
+    // 2. Room Joining & Event Listeners Effect
+    // Runs when roomId changes (to switch rooms) or deviceId/guestId changes
+    useEffect(() => {
+        const socket = socketRef.current;
+        if (!socket || !roomId) return;
+
+        console.log(`🔌 Registering listeners for room: ${roomId}`);
+
+        // Join the room
+        socket.emit('join_room', roomId, deviceId, guestId);
+
+        // Event: Room State Sync (History)
         const handleRoomState = (data) => {
+            if (data.roomId !== roomId) return; // Ignore events for other rooms
+            console.log('📥 Room State Received:', data);
+
             setRoomId(data.roomId);
+            setUserCount(data.userCount);
+
+            // Sync Lists
+            // Mark all existing IDs as processed to prevent duplicates
+            data.texts?.forEach(t => processedIdsRef.current.add(t.id));
+            data.files?.forEach(f => processedIdsRef.current.add(f.id));
+
             setTexts(data.texts || []);
             setFiles(data.files || []);
-            setUserCount(data.userCount);
-            toast.success(`Joined room: ${data.roomId}`, toastOptions);
+
+            // NOTE: We do NOT show "New Message" toasts for room_state history
         };
 
-        const handleRoomError = (err) => {
-            toast.error(err.message || 'Room Error', toastOptions);
-        };
-
+        // Event: User Count
         const handleUserCount = (count) => {
             setUserCount(count);
         };
 
+        // Event: New Text Shared
         const handleTextShared = (text) => {
+            // Deduplication Check
+            if (processedIdsRef.current.has(text.id)) return;
+            processedIdsRef.current.add(text.id);
+
+            // Timestamp Check (Optional: Strict Session Mode)
+            // If the text timestamp is OLDER than when we opened the app, 
+            // and it wasn't in the initial sync, it might be a ghost/delayed packet.
+            // However, usually we trust real-time events. 
+            // We just ensure we don't duplicate.
+
             setTexts((prev) => [...prev, text]);
             toast.info('New text shared!', toastOptions);
         };
 
+        // Event: Text Deleted
         const handleTextDeleted = ({ id }) => {
             setTexts((prev) => prev.filter(t => t.id !== id));
+            processedIdsRef.current.delete(id); // Allow re-add if needed (unlikely)
             toast.info('Text deleted.', toastOptions);
         };
 
+        // Event: Texts Cleared
         const handleTextsCleared = () => {
             setTexts([]);
+            processedIdsRef.current.clear();
             toast.info('All texts cleared.', toastOptions);
         };
 
+        // Event: File Shared
         const handleFileShared = (file) => {
+            if (processedIdsRef.current.has(file.id)) return;
+            processedIdsRef.current.add(file.id);
+
             setFiles((prev) => [...prev, file]);
             toast.info(`New file: ${file.originalName}`, toastOptions);
         };
 
+        // Event: File Deleted
         const handleFileDeleted = ({ id, reason }) => {
             setFiles((prev) => prev.filter(f => f.id !== id));
+            processedIdsRef.current.delete(id);
             if (reason === 'expired') {
-                toast.info('🕒 File expired and was automatically deleted.', toastOptions);
+                toast.info('🕒 File expired.', toastOptions);
             } else {
                 toast.info('File deleted.', toastOptions);
             }
         };
 
+        // Event: Room Closed
         const handleRoomClosed = () => {
-            toast.warning('This room has expired or been closed.', toastOptions);
-            setRoomId('');
-            fetchRoomInfo();
+            toast.warning('Room closed/expired.', toastOptions);
+            setRoomId(''); // This will trigger cleanup of this effect
+            fetchRoomInfo(); // Finds a new room
         };
 
-        socket.on('connect', handleConnect);
-        socket.on('disconnect', handleDisconnect);
+        const handleRoomError = (err) => {
+            toast.error(err.message, toastOptions);
+        };
+
+        // Register handlers
         socket.on('room_state', handleRoomState);
-        socket.on('room_error', handleRoomError);
         socket.on('user_count', handleUserCount);
         socket.on('text_shared', handleTextShared);
         socket.on('text_deleted', handleTextDeleted);
@@ -166,37 +218,34 @@ function WebApp() {
         socket.on('file_shared', handleFileShared);
         socket.on('file_deleted', handleFileDeleted);
         socket.on('room_closed', handleRoomClosed);
+        socket.on('room_error', handleRoomError);
 
+        // CLEANUP Listeners
         return () => {
-            if (socket) {
-                socket.off('connect', handleConnect);
-                socket.off('disconnect', handleDisconnect);
-                socket.off('room_state', handleRoomState);
-                socket.off('room_error', handleRoomError);
-                socket.off('user_count', handleUserCount);
-                socket.off('text_shared', handleTextShared);
-                socket.off('text_deleted', handleTextDeleted);
-                socket.off('texts_cleared', handleTextsCleared);
-                socket.off('file_shared', handleFileShared);
-                socket.off('file_deleted', handleFileDeleted);
-                socket.off('room_closed', handleRoomClosed);
-                socket.disconnect();
-            }
+            console.log(`🧹 Cleaning up listeners for room: ${roomId}`);
+            socket.off('room_state', handleRoomState);
+            socket.off('user_count', handleUserCount);
+            socket.off('text_shared', handleTextShared);
+            socket.off('text_deleted', handleTextDeleted);
+            socket.off('texts_cleared', handleTextsCleared);
+            socket.off('file_shared', handleFileShared);
+            socket.off('file_deleted', handleFileDeleted);
+            socket.off('room_closed', handleRoomClosed);
+            socket.off('room_error', handleRoomError);
+
+            // Note: We DO NOT disconnect the socket here, 
+            // only remove listeners because we might just be switching rooms
         };
-    }, [toastOptions, roomId, deviceId, guestId, fetchRoomInfo]);
+    }, [roomId, deviceId, guestId, toastOptions]); // Depend on roomId
 
     const handleRoomCreated = (newRoomId) => {
         setRoomId(newRoomId);
-        if (socketRef.current) {
-            socketRef.current.emit('join_room', newRoomId, deviceId, guestId);
-        }
+        // Effect will handle joining
     };
 
     const handleManualJoin = (manualRoomId) => {
         setRoomId(manualRoomId);
-        if (socketRef.current) {
-            socketRef.current.emit('join_room', manualRoomId, deviceId, guestId);
-        }
+        // Effect will handle joining
     };
 
     const handleCloseRoom = useCallback(() => {
@@ -204,11 +253,11 @@ function WebApp() {
     }, []);
 
     const handleSendText = useCallback((content) => {
-        if (!isConnected) {
+        if (!isConnected || !socketRef.current) {
             toast.error('Not connected to server', toastOptions);
             return;
         }
-        if (socketRef.current) socketRef.current.emit('send_text', { content });
+        socketRef.current.emit('send_text', { content });
     }, [isConnected, toastOptions]);
 
     const handleDeleteText = useCallback((textId) => {
@@ -241,14 +290,10 @@ function WebApp() {
                     setUploadProgress(percentCompleted);
                 }
             });
-            toast.success('File uploaded successfully!', toastOptions);
+            toast.success('File uploaded!', toastOptions);
         } catch (error) {
             console.error('Upload failed:', error);
-            if (error.response?.status === 429) {
-                toast.error('Upload limit reached. Please wait before uploading again.', toastOptions);
-            } else {
-                toast.error(error.response?.data?.error || 'File upload failed.', toastOptions);
-            }
+            toast.error(error.response?.data?.error || 'Upload failed.', toastOptions);
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
@@ -269,9 +314,8 @@ function WebApp() {
 
     const copyToClipboard = useCallback((text) => {
         navigator.clipboard.writeText(text).then(() => {
-            toast.success('Copied to clipboard!', toastOptions);
-        }).catch((err) => {
-            console.error('Copy failed:', err);
+            toast.success('Copied!', toastOptions);
+        }).catch(() => {
             toast.error('Failed to copy', toastOptions);
         });
     }, [toastOptions]);
