@@ -53,8 +53,17 @@ export const CallProvider = ({ socket, children }) => {
             };
 
             webrtcService.current.onConnectionStateChange = (state) => {
-                if (state === 'failed' || state === 'closed') {
+                console.log('📡 WebRTC State UI Update:', state);
+                if (state === 'failed') {
+                    setError('Connection failed');
                     endActiveCall();
+                } else if (state === 'disconnected') {
+                    // Don't end immediately, UI can show "Reconnecting..."
+                    setCallState('disconnected');
+                    setDisconnectReason('Connection unstable...');
+                } else if (state === 'connected') {
+                    setCallState('active');
+                    setDisconnectReason(null);
                 }
             };
 
@@ -129,13 +138,13 @@ export const CallProvider = ({ socket, children }) => {
      * End active call
      */
     const endActiveCall = useCallback(() => {
-        console.log('📴 Ending call');
+        console.log('📴 Ending active call');
 
         if (currentPeerId.current) {
             callSocketService.current.endCall(currentPeerId.current);
         }
 
-        cleanup();
+        cleanup(true); // Immediate cleanup
     }, []);
 
     // --- SOCKET EVENT HANDLERS ---
@@ -284,8 +293,8 @@ export const CallProvider = ({ socket, children }) => {
         currentPeerId.current = null;
     }, []);
 
-    const cleanup = useCallback(() => {
-        console.log('🧹 Cleaning up call state...');
+    const cleanup = useCallback((immediate = false) => {
+        console.log('🧹 Cleaning up call state (immediate:', immediate, ')');
 
         // Stop timer
         if (callTimer.current) {
@@ -298,11 +307,21 @@ export const CallProvider = ({ socket, children }) => {
             webrtcService.current.cleanup();
         }
 
-        // Only show "disconnected" UI if we were actually in a call
-        setCallState(prev => {
-            if (prev === 'idle' || prev === 'disconnected') return 'idle';
+        if (immediate) {
+            resetToIdle();
+            return;
+        }
 
-            // If we were in a call state, show disconnected briefly
+        // Show "disconnected" UI briefly before resetting
+        setCallState(prev => {
+            if (prev === 'idle' || prev === 'disconnected') {
+                if (prev === 'disconnected') {
+                    setTimeout(resetToIdle, 1500);
+                    return 'disconnected';
+                }
+                return 'idle';
+            };
+
             setTimeout(() => {
                 resetToIdle();
                 console.log('✅ Cleanup complete (delayed)');

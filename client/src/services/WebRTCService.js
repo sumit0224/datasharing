@@ -11,7 +11,15 @@
 
 const ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
+    { urls: 'stun:stun1.l.google.com:19302' },
+    /* 
+    // Recommended: Add a TURN server for better reliability on all networks
+    {
+        urls: 'turn:YOUR_TURN_SERVER:3478',
+        username: 'YOUR_USERNAME',
+        credential: 'YOUR_PASSWORD'
+    }
+    */
 ];
 
 class WebRTCService {
@@ -65,16 +73,19 @@ class WebRTCService {
         // Monitor connection state
         this.peerConnection.onconnectionstatechange = () => {
             const state = this.peerConnection.connectionState;
-            console.log('🔗 Connection state:', state);
+            console.log('🔗 Connection state changed:', state);
 
             if (this.onConnectionStateChange) {
                 this.onConnectionStateChange(state);
             }
 
-            // Auto-cleanup on failed connection
-            if (state === 'failed' || state === 'closed') {
-                console.error('❌ Connection failed or closed');
+            // 'disconnected' can be transient (network flap).
+            // Only 'failed' is terminal for the RTCPeerConnection itself.
+            if (state === 'failed') {
+                console.error('❌ Connection failed catastrophically');
                 this.cleanup();
+            } else if (state === 'closed') {
+                console.log('🔌 Connection closed normally or via cleanup');
             }
         };
 

@@ -9,6 +9,7 @@ import TextShare from './TextShare';
 import FileShare from './FileShare';
 import CreateRoomModal from './modals/CreateRoomModal';
 import JoinRoomModal from './modals/JoinRoomModal';
+import RandomVideoChat from './RandomVideoChat';
 import Logo from './Logo';
 import api from '../api';
 
@@ -41,6 +42,7 @@ function WebApp() {
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showCallMenu, setShowCallMenu] = useState(false);
+    const [showRandomChat, setShowRandomChat] = useState(false);
 
     // Stabilized Guest Identity - Wrapped in try-catch for iOS Safari Private Mode
     const { deviceId, guestId } = useMemo(() => {
@@ -79,10 +81,23 @@ function WebApp() {
     // Fetch initial room info (REST API)
     const fetchRoomInfo = useCallback(async () => {
         try {
+            // Check for room in URL first
+            const params = new URLSearchParams(window.location.search);
+            const urlRoomId = params.get('room');
+
+            if (urlRoomId) {
+                console.log('🌐 Joining room from URL:', urlRoomId);
+                setRoomId(urlRoomId);
+                return;
+            }
+
             const { data } = await api.get(`${SOCKET_URL}/api/room-info`);
             setRoomId(data.roomId);
-            // We do NOT manually emit join_room here anymore; 
-            // the socket connection effect handles joining based on roomId state.
+
+            // Sync URL without refreshing (optional but good for UX)
+            const newUrl = `${window.location.pathname}?room=${data.roomId}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+
         } catch (error) {
             console.error('Failed to fetch room info:', error);
             if (error.response?.status === 429) {
@@ -263,12 +278,16 @@ function WebApp() {
 
     const handleRoomCreated = (newRoomId) => {
         setRoomId(newRoomId);
-        // Effect will handle joining
+        // Sync URL
+        const newUrl = `${window.location.pathname}?room=${newRoomId}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
     };
 
     const handleManualJoin = (manualRoomId) => {
         setRoomId(manualRoomId);
-        // Effect will handle joining
+        // Sync URL
+        const newUrl = `${window.location.pathname}?room=${manualRoomId}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
     };
 
     const handleCloseRoom = useCallback(() => {
@@ -370,32 +389,41 @@ function WebApp() {
                                 )}
                             </div>
                         </div>
-                        <nav className="hidden md:flex items-center gap-4 text-xs font-bold uppercase tracking-wider" role="navigation" aria-label="Main navigation">
+                        <nav className="hidden md:flex items-center gap-3 text-sm font-medium" role="navigation" aria-label="Main navigation">
                             <button
                                 onClick={() => setShowJoinModal(true)}
-                                className="px-5 py-2.5 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 transition border border-white/5 hover:text-white"
+                                className="px-4 py-2 bg-white/5 text-gray-300 rounded-lg hover:bg-white/10 hover:text-white transition border border-white/5 backdrop-blur-sm"
                             >
                                 Join Room
                             </button>
                             <button
                                 onClick={() => setShowCreateModal(true)}
-                                className="px-5 py-2.5 bg-[#20B2AA] text-black rounded-xl hover:bg-[#1C9D96] transition shadow-[0_0_15px_-3px_rgba(32,178,170,0.3)] hover:shadow-[0_0_20px_-3px_rgba(32,178,170,0.5)] active:scale-95 duration-200"
+                                className="px-4 py-2 bg-[#20B2AA] text-black rounded-lg hover:bg-[#1C9D96] transition shadow-[0_0_15px_-3px_rgba(32,178,170,0.3)] hover:shadow-[0_0_20px_-3px_rgba(32,178,170,0.5)] active:scale-95 duration-200 font-bold"
                             >
                                 + New Room
+                            </button>
+
+                            {/* Random Chat Button */}
+                            <button
+                                onClick={() => setShowRandomChat(true)}
+                                className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 text-purple-200 rounded-lg transition border border-purple-500/20 flex items-center gap-2 group"
+                            >
+                                <span className="group-hover:scale-110 transition-transform">🌍</span>
+                                <span className="text-white/90">Random Chat</span>
                             </button>
 
                             {/* Video Call Button */}
                             <div className="relative">
                                 <button
                                     onClick={() => setShowCallMenu(!showCallMenu)}
-                                    className="relative px-5 py-2.5 bg-gradient-to-r from-[#20B2AA] to-[#1C9D96] text-white rounded-xl hover:shadow-lg hover:shadow-[#20B2AA]/30 transition active:scale-95 duration-200 flex items-center gap-2"
+                                    className="relative px-4 py-2 bg-white/5 text-gray-300 rounded-lg hover:bg-white/10 hover:text-white transition border border-white/5 flex items-center gap-2"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4 text-[#20B2AA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
                                     Video Call
                                     {users.length > 1 && (
-                                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
                                             {users.length - 1}
                                         </span>
                                     )}
@@ -582,12 +610,19 @@ function WebApp() {
                 </main>
 
 
-                <footer className="py-8 text-xs text-center border-t border-white/5 mt-auto">
-                    <div className="flex flex-col gap-2">
-                        <p className="text-gray-500">© {new Date().getFullYear()} P2P Local. Secure Local Transfer.</p>
-                        <div className="flex justify-center gap-4 text-gray-600">
-                            <Link to="/privacy" className="hover:text-[#20B2AA] transition-colors">Privacy</Link>
-                            <Link to="/terms" className="hover:text-[#20B2AA] transition-colors">Terms</Link>
+                <footer className="py-8 border-t border-white/5 mt-auto bg-black/40 backdrop-blur-xl">
+                    <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-center md:text-left">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                                <Logo className="w-5 h-5 opacity-50" />
+                                
+                            </div>
+                            
+                        </div>
+                        <div className="flex gap-6 text-gray-500">
+                            <Link to="/privacy" className="hover:text-[#20B2AA] transition-colors">Privacy Policy</Link>
+                            <Link to="/terms" className="hover:text-[#20B2AA] transition-colors">Terms of Service</Link>
+                            <a href="https://github.com/your-repo" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
                         </div>
                     </div>
                 </footer>
@@ -603,7 +638,17 @@ function WebApp() {
                     isOpen={showJoinModal}
                     onClose={() => setShowJoinModal(false)}
                     onJoinRoom={handleManualJoin}
+                    socket={socketRef.current}
+                    deviceId={deviceId}
                 />
+
+                {showRandomChat && (
+                    <RandomVideoChat
+                        socket={socketRef.current}
+                        deviceId={deviceId}
+                        onClose={() => setShowRandomChat(false)}
+                    />
+                )}
 
                 {/* Video Call UI Components */}
                 <IncomingCallModal />

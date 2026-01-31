@@ -59,6 +59,29 @@ const { getSignedDownloadUrl, deleteFile } = require('./utils/r2Client');
 // --- IN-MEMORY PRESENCE (Unique Devices per Room) ---
 const roomPresence = new Map(); // roomId -> Map(deviceId -> Set(socketIds))
 
+// --- VIDEO CALL STATE (Global) ---
+const userCallState = new Map();   // userId (deviceId) -> { inCall, partnerId, socketId, status, connectedAt, disconnectedAt, timeoutId, createdAt }
+const deviceSocketMap = new Map(); // deviceId -> socketId (O(1) lookup)
+
+// --- CALL METRICS ---
+const callMetrics = {
+    totalCalls: 0,
+    activeCalls: 0,
+    completedCalls: 0,
+    failedCalls: 0,
+    totalDuration: 0, // In seconds
+    averageDuration: 0
+};
+
+// --- CALL RATE LIMITING ---
+const callAttempts = new Map(); // deviceId -> { count, resetAt }
+
+// --- RANDOM VIDEO CHAT (Omegle-style) ---
+const searchingUsers = new Map(); // userId -> { userId, socketId, region, timestamp, previousPartnerId, preferences }
+const randomChatPairs = new Map(); // userId -> partnerId
+const matchHistory = new Map(); // userId -> Set(recentPartnerIds)
+const userReports = new Map(); // userId -> count
+
 // --- HELPER FUNCTIONS ---
 
 async function getRoom(roomId) {
@@ -145,6 +168,163 @@ async function broadcastRoomUpdate(roomId, eventName, payload) {
 
 function sendToRoom(roomId, eventName, payload) {
     io.to(roomId).emit(eventName, payload);
+}
+
+// --- VIDEO CALL HELPERS ---
+
+/**
+ * Get socket by device ID (O(1))
+ * @param {string} deviceId 
+ * @returns {import('socket.io').Socket|null}
+ */
+function getSocketByDeviceId(deviceId) {
+    if (!deviceId) return null;
+    const socketId = deviceSocketMap.get(deviceId);
+    if (!socketId) return null;
+    return io.sockets.sockets.get(socketId);
+}
+
+/**
+ * Update call metrics
+ * @param {string} event - 'call_started' | 'call_ended' | 'call_failed'
+ * @param {Object} data - Optional data (e.g., duration)
+ */
+function updateCallMetrics(event, data = {}) {
+    switch (event) {
+        case 'call_started':
+            callMetrics.totalCalls++;
+            callMetrics.activeCalls++;
+            break;
+        case 'call_ended':
+            if (callMetrics.activeCalls > 0) callMetrics.activeCalls--;
+            callMetrics.completedCalls++;
+            if (data.duration) {
+                callMetrics.totalDuration += data.duration;
+                callMetrics.averageDuration = callMetrics.totalDuration / callMetrics.completedCalls;
+            }
+            break;
+        case 'call_failed':
+            if (callMetrics.activeCalls > 0) callMetrics.activeCalls--;
+            callMetrics.failedCalls++;
+            break;
+    }
+}
+
+/**
+ * Check if a device is rate limited for call requests
+ * @param {string} deviceId 
+ * @returns {boolean} - true if allowed, false if limited
+ */
+function checkCallRateLimit(deviceId) {
+    const now = Date.now();
+    const attempt = callAttempts.get(deviceId);
+
+    if (!attempt || now > attempt.resetAt) {
+        callAttempts.set(deviceId, {
+            count: 1,
+            resetAt: now + 60000 // 1 minute window
+        });
+        return true;
+    }
+
+    if (attempt.count >= 10) return false;
+
+    attempt.count++;
+    return true;
+}
+
+// --- RANDOM MATCHING HELPERS ---
+
+/**
+ * Update match history to prevent immediate re-matching
+ */
+function updateMatchHistory(userId, partnerId) {
+    if (!matchHistory.has(userId)) {
+        matchHistory.set(userId, new Set());
+    }
+
+    const history = matchHistory.get(userId);
+    history.add(partnerId);
+
+    // Keep only last 5 partners
+    if (history.size > 5) {
+        const oldest = Array.from(history)[0];
+        history.delete(oldest);
+    }
+}
+
+/**
+ * Find best match for a user
+ * CRITICAL: Must prevent duplicate assignments and race conditions
+ */
+function findRandomMatch(userId, userRegion, previousPartnerId) {
+    // Get all available users (exclude current user and previous partner)
+    const available = Array.from(searchingUsers.entries())
+        .filter(([id, data]) => {
+            // Exclude self
+            if (id === userId) return false;
+
+            // Exclude if already matched
+            if (randomChatPairs.has(id)) return false;
+
+            // Exclude previous partner (avoid immediate re-match)
+            if (id === previousPartnerId) return false;
+
+            // Exclude recent matches (last 5 partners)
+            const history = matchHistory.get(userId) || new Set();
+            if (history.has(id)) return false;
+
+            return true;
+        });
+
+    if (available.length === 0) return null;
+
+    // Priority 1: Same region (faster connection)
+    const sameRegion = available.filter(([id, data]) => data.region === userRegion);
+
+    if (sameRegion.length > 0) {
+        // Random selection from same region
+        const randomIndex = Math.floor(Math.random() * sameRegion.length);
+        return sameRegion[randomIndex][0];
+    }
+
+    // Priority 2: Any available user globally
+    const randomIndex = Math.floor(Math.random() * available.length);
+    return available[randomIndex][0];
+}
+
+/**
+ * Create a matched pair
+ * Uses atomic operations to prevent race conditions
+ */
+function createRandomMatch(user1Id, user2Id) {
+    // Double-check neither is already matched (race condition protection)
+    if (randomChatPairs.has(user1Id) || randomChatPairs.has(user2Id)) {
+        return null; // Race condition detected
+    }
+
+    // Atomic pair creation
+    randomChatPairs.set(user1Id, user2Id);
+    randomChatPairs.set(user2Id, user1Id);
+
+    // Remove from searching pool
+    const user1Data = searchingUsers.get(user1Id);
+    const user2Data = searchingUsers.get(user2Id);
+    searchingUsers.delete(user1Id);
+    searchingUsers.delete(user2Id);
+
+    // Update match history (remember last 5 partners)
+    updateMatchHistory(user1Id, user2Id);
+    updateMatchHistory(user2Id, user1Id);
+
+    // Generate unique room ID for this pair
+    const roomId = `random_${user1Id}_${user2Id}_${Date.now()}`;
+
+    return {
+        roomId,
+        user1: user1Data,
+        user2: user2Data
+    };
 }
 
 // --- SOCKET.IO ---
@@ -258,6 +438,13 @@ app.get('/api/stats', apiLimiter, async (req, res) => {
         logger.error('Error in /api/stats:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+app.get('/api/call-metrics', apiLimiter, (req, res) => {
+    res.json({
+        ...callMetrics,
+        activeCallPairs: Math.floor(callMetrics.activeCalls / 2)
+    });
 });
 
 const PushToken = require('./models/PushToken');
@@ -488,16 +675,19 @@ io.on('connection', (socket) => {
 
         socket.join(roomId);
         socket.data.currentRoom = roomId;
-        socket.data.deviceId = deviceId || `legacy_${socket.id.substring(0, 8)}`;
-        socket.data.guestId = guestId || socket.data.deviceId.substring(0, 8);
+        const dId = deviceId || `legacy_${socket.id.substring(0, 8)}`;
+        socket.data.deviceId = dId;
+        socket.data.guestId = guestId || dId.substring(0, 8);
+
+        // Map device to socket for O(1) lookup
+        deviceSocketMap.set(dId, socket.id);
 
         // Track user for analytics
-        await trackUser(socket.data.deviceId);
+        await trackUser(dId);
 
 
         if (!roomPresence.has(roomId)) roomPresence.set(roomId, new Map());
         const roomData = roomPresence.get(roomId);
-        const dId = socket.data.deviceId;
         if (!roomData.has(dId)) roomData.set(dId, new Set());
         roomData.get(dId).add(socket.id);
 
@@ -619,235 +809,704 @@ io.on('connection', (socket) => {
 
 
     // --- VIDEO CALL SIGNALING ---
-    // Track active calls: userId -> { inCall: bool, partnerId: string, socketId: string }
-    const userCallState = new Map();
 
-    // Helper: Get user's call state
-    function getUserCallState(socketId) {
-        for (const [userId, state] of userCallState.entries()) {
-            if (state.socketId === socketId) return { userId, ...state };
-        }
-        return null;
-    }
-
-    // Helper: Clear user call state
-    function clearUserCallState(socketId) {
-        for (const [userId, state] of userCallState.entries()) {
-            if (state.socketId === socketId) {
-                userCallState.delete(userId);
-                return userId;
-            }
-        }
-    }
-
-    // Call Request: User A wants to call User B
+    /**
+     * Handle incoming call request from a user
+     * @event call:request
+     * @param {Object} data
+     * @param {string} data.recipientId - Target device ID
+     */
     socket.on('call:request', ({ recipientId }) => {
         const callerId = socket.data.deviceId || socket.id;
 
-        // Validation
-        if (!recipientId) {
-            return socket.emit('call:error', { reason: 'invalid_recipient' });
+        try {
+            // Rate Limiting
+            if (!checkCallRateLimit(callerId)) {
+                return socket.emit('call:error', {
+                    reason: 'rate_limit_exceeded',
+                    message: 'Too many call attempts. Please wait.'
+                });
+            }
+
+            // Input Validation
+            if (!recipientId || typeof recipientId !== 'string') {
+                return socket.emit('call:error', {
+                    reason: 'invalid_recipient',
+                    message: 'Recipient ID must be a valid string'
+                });
+            }
+
+            if (recipientId === callerId) {
+                return socket.emit('call:error', {
+                    reason: 'invalid_recipient',
+                    message: 'Cannot call yourself'
+                });
+            }
+
+            // Check if recipient is online
+            const recipientSocket = getSocketByDeviceId(recipientId);
+
+            if (!recipientSocket) {
+                updateCallMetrics('call_failed');
+                return socket.emit('call:error', { reason: 'user_offline' });
+            }
+
+            // Check if recipient is already in a call
+            if (userCallState.has(recipientId)) {
+                updateCallMetrics('call_failed');
+                return socket.emit('call:error', { reason: 'user_busy' });
+            }
+
+            // Check if caller is already in a call
+            if (userCallState.has(callerId)) {
+                updateCallMetrics('call_failed');
+                return socket.emit('call:error', { reason: 'already_in_call' });
+            }
+
+            // Auto-cancel timeout (60 seconds)
+            const timeoutId = setTimeout(() => {
+                const state = userCallState.get(callerId);
+                if (state && state.status === 'calling') {
+                    userCallState.delete(callerId);
+                    userCallState.delete(recipientId);
+
+                    const currentCallerSocket = getSocketByDeviceId(callerId);
+                    if (currentCallerSocket) {
+                        currentCallerSocket.emit('call:timeout', {
+                            recipientId,
+                            message: 'Call not answered'
+                        });
+                    }
+
+                    const currentRecipientSocket = getSocketByDeviceId(recipientId);
+                    if (currentRecipientSocket) {
+                        currentRecipientSocket.emit('call:ended', {
+                            peerId: callerId,
+                            reason: 'timeout'
+                        });
+                    }
+
+                    statusLogger('CALL_TIMEOUT', { callerId, recipientId });
+                    updateCallMetrics('call_failed');
+                }
+            }, 60000);
+
+            // Mark both users as "in call" (pending)
+            userCallState.set(callerId, {
+                inCall: false,
+                partnerId: recipientId,
+                socketId: socket.id,
+                status: 'calling',
+                createdAt: Date.now(),
+                timeoutId
+            });
+            userCallState.set(recipientId, {
+                inCall: false,
+                partnerId: callerId,
+                socketId: recipientSocket.id,
+                status: 'ringing',
+                createdAt: Date.now()
+            });
+
+            // Notify recipient of incoming call
+            recipientSocket.emit('call:incoming', {
+                callerId,
+                callerName: socket.data.guestId || callerId
+            });
+
+            updateCallMetrics('call_started');
+            statusLogger('CALL_REQUEST', { callerId, recipientId });
+        } catch (error) {
+            logger.error('Error in call:request:', error);
+            socket.emit('call:error', { reason: 'server_error' });
         }
-
-        // Check if recipient is online
-        const recipientSocket = Array.from(io.sockets.sockets.values())
-            .find(s => (s.data.deviceId || s.id) === recipientId);
-
-        if (!recipientSocket) {
-            return socket.emit('call:error', { reason: 'user_offline' });
-        }
-
-        // Check if recipient is already in a call
-        if (userCallState.has(recipientId)) {
-            return socket.emit('call:error', { reason: 'user_busy' });
-        }
-
-        // Check if caller is already in a call
-        if (userCallState.has(callerId)) {
-            return socket.emit('call:error', { reason: 'already_in_call' });
-        }
-
-        // Mark both users as "in call" (pending)
-        userCallState.set(callerId, {
-            inCall: false,
-            partnerId: recipientId,
-            socketId: socket.id,
-            status: 'calling'
-        });
-        userCallState.set(recipientId, {
-            inCall: false,
-            partnerId: callerId,
-            socketId: recipientSocket.id,
-            status: 'ringing'
-        });
-
-        // Notify recipient of incoming call
-        recipientSocket.emit('call:incoming', {
-            callerId,
-            callerName: socket.data.guestId || callerId
-        });
-
-        logger.info(`Call request: ${callerId} → ${recipientId}`);
     });
 
-    // Call Accepted: User B accepts the call
-    socket.on('call:accepted', ({ callerId }) => {
+    /**
+     * Helper for consistent signaling logging
+     * @param {string} event 
+     * @param {Object} data 
+     */
+    function statusLogger(event, data) {
+        logger.info(`📡 ${event}`, { ...data, timestamp: new Date().toISOString() });
+    }
+
+    /**
+     * Handle user accepting an incoming call
+     * @event call:accept
+     * @param {Object} data
+     * @param {string} data.callerId - Original caller device ID
+     */
+    socket.on('call:accept', ({ callerId }) => {
         const recipientId = socket.data.deviceId || socket.id;
 
-        // Find caller's socket
-        const callerSocket = Array.from(io.sockets.sockets.values())
-            .find(s => (s.data.deviceId || s.id) === callerId);
+        try {
+            if (!callerId) {
+                return socket.emit('call:error', { reason: 'invalid_caller_id' });
+            }
 
-        if (!callerSocket) {
-            clearUserCallState(socket.id);
-            return socket.emit('call:error', { reason: 'caller_offline' });
+            // Find caller's socket
+            const callerSocket = getSocketByDeviceId(callerId);
+
+            if (!callerSocket) {
+                userCallState.delete(recipientId);
+                userCallState.delete(callerId);
+                return socket.emit('call:error', { reason: 'caller_offline' });
+            }
+
+            const callerState = userCallState.get(callerId);
+            const recipientState = userCallState.get(recipientId);
+
+            if (!callerState || callerState.partnerId !== recipientId) {
+                return socket.emit('call:error', { reason: 'call_not_found' });
+            }
+
+            // Clear timeout
+            if (callerState.timeoutId) {
+                clearTimeout(callerState.timeoutId);
+                delete callerState.timeoutId;
+            }
+
+            // Update call states to active
+            const now = Date.now();
+            callerState.inCall = true;
+            callerState.status = 'active';
+            callerState.connectedAt = now;
+
+            if (recipientState) {
+                recipientState.inCall = true;
+                recipientState.status = 'active';
+                recipientState.connectedAt = now;
+            }
+
+            // Notify both users to start WebRTC connection
+            callerSocket.emit('call:accepted', {
+                recipientId,
+                isInitiator: true // Caller creates offer
+            });
+            socket.emit('call:accepted', {
+                callerId,
+                isInitiator: false // Recipient waits for offer
+            });
+
+            statusLogger('CALL_ACCEPTED', { callerId, recipientId });
+        } catch (error) {
+            logger.error('Error in call:accept:', error);
+            socket.emit('call:error', { reason: 'server_error' });
         }
-
-        // Update call states to active
-        if (userCallState.has(callerId)) {
-            userCallState.get(callerId).inCall = true;
-            userCallState.get(callerId).status = 'active';
-        }
-        if (userCallState.has(recipientId)) {
-            userCallState.get(recipientId).inCall = true;
-            userCallState.get(recipientId).status = 'active';
-        }
-
-        // Notify both users to start WebRTC connection
-        callerSocket.emit('call:accepted', {
-            recipientId,
-            isInitiator: true // Caller creates offer
-        });
-        socket.emit('call:accepted', {
-            callerId,
-            isInitiator: false // Recipient waits for offer
-        });
-
-        logger.info(`Call accepted: ${callerId} ↔ ${recipientId}`);
     });
 
-    // Call Rejected: User B rejects the call
-    socket.on('call:rejected', ({ callerId }) => {
+    /**
+     * Handle user rejecting an incoming call
+     * @event call:reject
+     * @param {Object} data
+     * @param {string} data.callerId - Original caller device ID
+     */
+    socket.on('call:reject', ({ callerId }) => {
         const recipientId = socket.data.deviceId || socket.id;
 
-        // Find caller's socket
-        const callerSocket = Array.from(io.sockets.sockets.values())
-            .find(s => (s.data.deviceId || s.id) === callerId);
+        try {
+            if (!callerId) return;
 
-        // Cleanup call states
-        userCallState.delete(callerId);
-        userCallState.delete(recipientId);
+            // Find caller's socket
+            const callerSocket = getSocketByDeviceId(callerId);
 
-        // Notify caller
-        if (callerSocket) {
-            callerSocket.emit('call:rejected', { recipientId });
+            // Cleanup call states
+            userCallState.delete(callerId);
+            userCallState.delete(recipientId);
+
+            // Notify caller
+            if (callerSocket) {
+                callerSocket.emit('call:rejected', { recipientId });
+            }
+
+            statusLogger('CALL_REJECTED', { callerId, recipientId });
+            updateCallMetrics('call_failed');
+        } catch (error) {
+            logger.error('Error in call:reject:', error);
         }
-
-        logger.info(`Call rejected: ${recipientId} rejected ${callerId}`);
     });
 
-    // Call Ended: Either user ends the call
+    /**
+     * Handle user ending an active call
+     * @event call:ended
+     * @param {Object} data
+     * @param {string} data.peerId - Partner's device ID
+     */
     socket.on('call:ended', ({ peerId }) => {
         const userId = socket.data.deviceId || socket.id;
 
-        // Find peer's socket
-        const peerSocket = Array.from(io.sockets.sockets.values())
-            .find(s => (s.data.deviceId || s.id) === peerId);
+        try {
+            if (!peerId) return;
 
-        // Cleanup call states
-        userCallState.delete(userId);
-        userCallState.delete(peerId);
+            // Find peer's socket
+            const peerSocket = getSocketByDeviceId(peerId);
 
-        // Notify peer
-        if (peerSocket) {
-            peerSocket.emit('call:ended', { peerId: userId });
+            const callState = userCallState.get(userId);
+            const duration = callState && callState.connectedAt ? Math.floor((Date.now() - callState.connectedAt) / 1000) : 0;
+
+            // Cleanup call states
+            userCallState.delete(userId);
+            userCallState.delete(peerId);
+
+            // Notify peer
+            if (peerSocket) {
+                peerSocket.emit('call:ended', { peerId: userId });
+            }
+
+            statusLogger('CALL_ENDED', { userId, peerId, duration });
+            updateCallMetrics('call_ended', { duration });
+        } catch (error) {
+            logger.error('Error in call:ended:', error);
         }
-
-        logger.info(`Call ended: ${userId} ↔ ${peerId}`);
     });
 
-    // --- WEBRTC SIGNALING RELAY ---
+    /**
+     * Handle client re-establishing call state after reconnection
+     * @event call:reconnect
+     * @param {Object} data
+     * @param {string} data.partnerId - Partner's device ID
+     */
+    socket.on('call:reconnect', ({ partnerId }) => {
+        const userId = socket.data.deviceId || socket.id;
 
-    // Relay SDP Offer
+        try {
+            if (!partnerId) return;
+
+            const callState = userCallState.get(userId);
+
+            if (callState && callState.partnerId === partnerId) {
+                // Clear disconnection flag
+                delete callState.disconnectedAt;
+                callState.socketId = socket.id; // Update to new socket
+
+                // Re-map device to new socket
+                deviceSocketMap.set(userId, socket.id);
+
+                // Notify partner of reconnection
+                const partnerSocket = getSocketByDeviceId(partnerId);
+
+                if (partnerSocket) {
+                    partnerSocket.emit('call:partner_reconnected', {
+                        peerId: userId
+                    });
+                }
+
+                statusLogger('CALL_RECONNECTED', { userId, partnerId });
+            } else {
+                socket.emit('call:error', {
+                    reason: 'reconnection_failed',
+                    message: 'Active call session not found'
+                });
+            }
+        } catch (error) {
+            logger.error('Error in call:reconnect:', error);
+            socket.emit('call:error', { reason: 'server_error' });
+        }
+    });
+
+    /**
+     * Relay SDP Offer
+     * @event webrtc:offer
+     */
     socket.on('webrtc:offer', ({ recipientId, offer }) => {
-        const recipientSocket = Array.from(io.sockets.sockets.values())
-            .find(s => (s.data.deviceId || s.id) === recipientId);
+        try {
+            if (!recipientId || !offer) {
+                return socket.emit('call:error', { reason: 'invalid_signaling_data' });
+            }
 
-        if (recipientSocket) {
-            const senderId = socket.data.deviceId || socket.id;
-            recipientSocket.emit('webrtc:offer', { senderId, offer });
+            const recipientSocket = getSocketByDeviceId(recipientId);
+
+            if (recipientSocket) {
+                const senderId = socket.data.deviceId || socket.id;
+                recipientSocket.emit('webrtc:offer', { senderId, offer });
+                logger.debug(`Relayed offer: ${senderId} → ${recipientId}`);
+            } else {
+                socket.emit('call:error', {
+                    reason: 'recipient_offline',
+                    action: 'offer_failed'
+                });
+            }
+        } catch (error) {
+            logger.error('Error in webrtc:offer:', error);
         }
     });
 
-    // Relay SDP Answer
+    /**
+     * Relay SDP Answer
+     * @event webrtc:answer
+     */
     socket.on('webrtc:answer', ({ recipientId, answer }) => {
-        const recipientSocket = Array.from(io.sockets.sockets.values())
-            .find(s => (s.data.deviceId || s.id) === recipientId);
+        try {
+            if (!recipientId || !answer) {
+                return socket.emit('call:error', { reason: 'invalid_signaling_data' });
+            }
 
-        if (recipientSocket) {
-            const senderId = socket.data.deviceId || socket.id;
-            recipientSocket.emit('webrtc:answer', { senderId, answer });
+            const recipientSocket = getSocketByDeviceId(recipientId);
+
+            if (recipientSocket) {
+                const senderId = socket.data.deviceId || socket.id;
+                recipientSocket.emit('webrtc:answer', { senderId, answer });
+                logger.debug(`Relayed answer: ${senderId} → ${recipientId}`);
+            } else {
+                socket.emit('call:error', {
+                    reason: 'recipient_offline',
+                    action: 'answer_failed'
+                });
+            }
+        } catch (error) {
+            logger.error('Error in webrtc:answer:', error);
         }
     });
 
-    // Relay ICE Candidate
+    /**
+     * Relay ICE Candidate
+     * @event webrtc:ice-candidate
+     */
     socket.on('webrtc:ice-candidate', ({ recipientId, candidate }) => {
-        const recipientSocket = Array.from(io.sockets.sockets.values())
-            .find(s => (s.data.deviceId || s.id) === recipientId);
+        try {
+            if (!recipientId || !candidate) {
+                return socket.emit('call:error', { reason: 'invalid_signaling_data' });
+            }
 
-        if (recipientSocket) {
-            const senderId = socket.data.deviceId || socket.id;
-            recipientSocket.emit('webrtc:ice-candidate', { senderId, candidate });
+            const recipientSocket = getSocketByDeviceId(recipientId);
+
+            if (recipientSocket) {
+                const senderId = socket.data.deviceId || socket.id;
+                recipientSocket.emit('webrtc:ice-candidate', { senderId, candidate });
+                logger.debug(`Relayed ICE candidate: ${senderId} → ${recipientId}`);
+            }
+        } catch (error) {
+            logger.error('Error in webrtc:ice-candidate:', error);
         }
     });
 
     // --- END OF SOCKET HANDLERS ---
+    /**
+     * User starts searching for random match
+     */
+    socket.on('random:start_search', ({ region, preferences }) => {
+        try {
+            const userId = socket.data.deviceId || socket.id;
 
-    socket.on('disconnect', async () => {
-        // Video Call Cleanup
-        const userId = socket.data.deviceId || socket.id;
-        const callState = userCallState.get(userId);
-
-        if (callState && callState.partnerId) {
-            // Notify partner that call ended due to disconnect
-            const partnerSocket = Array.from(io.sockets.sockets.values())
-                .find(s => (s.data.deviceId || s.id) === callState.partnerId);
-
-            if (partnerSocket) {
-                partnerSocket.emit('call:ended', {
-                    peerId: userId,
-                    reason: 'disconnected'
+            // Validation
+            if (randomChatPairs.has(userId)) {
+                return socket.emit('random:error', {
+                    reason: 'already_matched',
+                    message: 'You are already in a chat. End current chat first.'
                 });
             }
 
-            // Cleanup both users' call states
-            userCallState.delete(userId);
-            userCallState.delete(callState.partnerId);
-
-            logger.info(`Call auto-ended due to disconnect: ${userId}`);
-        }
-
-        // Room Cleanup
-        const currentRoom = socket.data.currentRoom;
-        const dId = socket.data.deviceId;
-        if (currentRoom && dId && roomPresence.has(currentRoom)) {
-            const roomData = roomPresence.get(currentRoom);
-            if (roomData.has(dId)) {
-                roomData.get(dId).delete(socket.id);
-                if (roomData.get(dId).size === 0) roomData.delete(dId);
+            if (searchingUsers.has(userId)) {
+                return socket.emit('random:error', {
+                    reason: 'already_searching',
+                    message: 'Already searching for a match'
+                });
             }
-            if (roomData.size === 0) roomPresence.delete(currentRoom);
 
-            const userCount = getRoomUserCount(currentRoom);
-            logger.info(`👋 Device ${dId.substring(0, 8)} left room ${currentRoom}. New count: ${userCount}`);
+            // Get previous partner from match history to avoid re-matching
+            const history = matchHistory.get(userId) || new Set();
+            const previousPartnerId = Array.from(history).pop() || null;
 
-            // Immediate broadcast
-            await broadcastRoomUpdate(currentRoom, 'user_count', userCount);
+            // Add to searching pool
+            searchingUsers.set(userId, {
+                userId,
+                socketId: socket.id,
+                region: region || 'global',
+                timestamp: Date.now(),
+                previousPartnerId,
+                preferences: preferences || {}
+            });
 
-            // Additional delayed broadcast to ensure all clients receive the update
-            setTimeout(() => {
-                broadcastRoomUpdate(currentRoom, 'user_count', getRoomUserCount(currentRoom));
-            }, 100);
+            // Acknowledge search started
+            socket.emit('random:searching', {
+                searchingCount: searchingUsers.size
+            });
+
+            // Try to find immediate match
+            const partnerId = findRandomMatch(userId, region || 'global', previousPartnerId);
+
+            if (partnerId) {
+                // Match found! Create pair
+                const match = createRandomMatch(userId, partnerId);
+
+                if (match) {
+                    const user1Socket = getSocketByDeviceId(userId);
+                    const user2Socket = getSocketByDeviceId(partnerId);
+
+                    if (user1Socket && user2Socket) {
+                        // Notify both users
+                        user1Socket.emit('random:matched', {
+                            partnerId,
+                            roomId: match.roomId,
+                            partnerRegion: match.user2.region
+                        });
+
+                        user2Socket.emit('random:matched', {
+                            partnerId: userId,
+                            roomId: match.roomId,
+                            partnerRegion: match.user1.region
+                        });
+
+                        logger.info(`🎲 Random match created: ${userId} ↔ ${partnerId}`);
+                    }
+                }
+            }
+
+            logger.info(`🔍 User searching: ${userId} (${searchingUsers.size} total)`);
+        } catch (error) {
+            logger.error('Error in random:start_search:', error);
+            socket.emit('random:error', {
+                reason: 'search_failed',
+                message: 'Failed to start search'
+            });
+        }
+    });
+
+    /**
+     * User stops searching (canceled)
+     */
+    socket.on('random:stop_search', () => {
+        try {
+            const userId = socket.data.deviceId || socket.id;
+
+            if (searchingUsers.has(userId)) {
+                searchingUsers.delete(userId);
+                socket.emit('random:search_stopped');
+                logger.info(`🛑 User stopped searching: ${userId}`);
+            }
+        } catch (error) {
+            logger.error('Error in random:stop_search:', error);
+        }
+    });
+
+    /**
+     * User ends random chat
+     */
+    socket.on('random:end_chat', () => {
+        try {
+            const userId = socket.data.deviceId || socket.id;
+            const partnerId = randomChatPairs.get(userId);
+
+            if (!partnerId) {
+                return socket.emit('random:error', {
+                    reason: 'not_in_chat',
+                    message: 'You are not in a random chat'
+                });
+            }
+
+            // Get partner socket
+            const partnerSocket = getSocketByDeviceId(partnerId);
+
+            // Clean up pair
+            randomChatPairs.delete(userId);
+            randomChatPairs.delete(partnerId);
+
+            // Notify both users
+            socket.emit('random:chat_ended', { reason: 'user_ended' });
+            if (partnerSocket) {
+                partnerSocket.emit('random:chat_ended', { reason: 'partner_ended' });
+            }
+
+            logger.info(`👋 Random chat ended: ${userId} ↔ ${partnerId}`);
+        } catch (error) {
+            logger.error('Error in random:end_chat:', error);
+        }
+    });
+
+    /**
+     * User reports partner (abuse prevention)
+     */
+    socket.on('random:report', ({ partnerId, reason }) => {
+        try {
+            const userId = socket.data.deviceId || socket.id;
+
+            // Log report for moderation
+            logger.warn(`🚨 REPORT: ${userId} reported ${partnerId} for: ${reason}`);
+
+            if (!userReports.has(partnerId)) {
+                userReports.set(partnerId, 0);
+            }
+            const count = userReports.get(partnerId) + 1;
+            userReports.set(partnerId, count);
+
+            // Auto-ban/flag logic could go here
+
+            socket.emit('random:report_submitted', {
+                message: 'Report submitted. Thank you.'
+            });
+        } catch (error) {
+            logger.error('Error in random:report:', error);
+        }
+    });
+
+    /**
+     * Skip to next random partner
+     */
+    socket.on('random:skip', () => {
+        try {
+            const userId = socket.data.deviceId || socket.id;
+            const currentPartnerId = randomChatPairs.get(userId);
+
+            if (!currentPartnerId) {
+                return socket.emit('random:error', {
+                    reason: 'not_in_chat',
+                    message: 'You are not in a chat'
+                });
+            }
+
+            // End current chat
+            const partnerSocket = getSocketByDeviceId(currentPartnerId);
+
+            randomChatPairs.delete(userId);
+            randomChatPairs.delete(currentPartnerId);
+
+            if (partnerSocket) {
+                partnerSocket.emit('random:chat_ended', { reason: 'partner_skipped' });
+            }
+
+            // Immediately start searching for new match
+            const region = socket.data.region || 'global';
+
+            searchingUsers.set(userId, {
+                userId,
+                socketId: socket.id,
+                region,
+                timestamp: Date.now(),
+                previousPartnerId: currentPartnerId, // Avoid re-matching
+                preferences: {}
+            });
+
+            socket.emit('random:searching', {
+                searchingCount: searchingUsers.size
+            });
+
+            // Try immediate match
+            const newPartnerId = findRandomMatch(userId, region, currentPartnerId);
+
+            if (newPartnerId) {
+                const match = createRandomMatch(userId, newPartnerId);
+                if (match) {
+                    const user1Socket = getSocketByDeviceId(userId);
+                    const user2Socket = getSocketByDeviceId(newPartnerId);
+
+                    if (user1Socket && user2Socket) {
+                        user1Socket.emit('random:matched', {
+                            partnerId: newPartnerId,
+                            roomId: match.roomId,
+                            partnerRegion: match.user2.region
+                        });
+                        user2Socket.emit('random:matched', {
+                            partnerId: userId,
+                            roomId: match.roomId,
+                            partnerRegion: match.user1.region
+                        });
+                    }
+                }
+            }
+
+            logger.info(`⏭️ User skipped: ${userId} (previous: ${currentPartnerId})`);
+        } catch (error) {
+            logger.error('Error in random:skip:', error);
+        }
+    });
+
+
+    socket.on('disconnect', async (reason) => {
+        try {
+            const userId = socket.data.deviceId || socket.id;
+
+            // Handle random chat disconnect
+            if (randomChatPairs.has(userId)) {
+                const partnerId = randomChatPairs.get(userId);
+                const partnerSocket = getSocketByDeviceId(partnerId);
+
+                // Notify partner
+                if (partnerSocket) {
+                    partnerSocket.emit('random:chat_ended', {
+                        reason: 'partner_disconnected'
+                    });
+                }
+
+                // Cleanup
+                randomChatPairs.delete(userId);
+                randomChatPairs.delete(partnerId);
+            }
+
+            // Remove from searching pool
+            if (searchingUsers.has(userId)) {
+                searchingUsers.delete(userId);
+            }
+            const callState = userCallState.get(userId);
+
+            if (callState && callState.partnerId) {
+                const partnerId = callState.partnerId;
+                logger.info(`User ${userId} disconnected during call. Reason: ${reason}. Starting 5s grace period...`);
+
+                // Store disconnection time for grace period
+                callState.disconnectedAt = Date.now();
+
+                // Grace period: 5 seconds
+                setTimeout(() => {
+                    const currentState = userCallState.get(userId);
+
+                    // Check if user reconnected (state would be updated or deleted)
+                    if (currentState && currentState.disconnectedAt) {
+                        // User didn't reconnect - end the call
+                        const partnerSocket = getSocketByDeviceId(partnerId);
+
+                        if (partnerSocket) {
+                            partnerSocket.emit('call:ended', {
+                                peerId: userId,
+                                reason: 'partner_disconnected'
+                            });
+                        }
+
+                        // Cleanup both users' call states
+                        const duration = callState.connectedAt ? Math.floor((Date.now() - callState.connectedAt) / 1000) : 0;
+                        updateCallMetrics('call_ended', { duration });
+
+                        userCallState.delete(userId);
+                        userCallState.delete(partnerId);
+
+                        logger.info(`Call ended after grace period: ${userId} ↔ ${partnerId}`);
+                    } else if (!currentState) {
+                        logger.info(`Call state already cleaned up for ${userId}`);
+                    } else {
+                        logger.info(`User ${userId} reconnected within grace period, call preserved.`);
+                    }
+                }, 5000);
+            }
+
+            // Device Map Cleanup
+            if (socket.data.deviceId) {
+                deviceSocketMap.delete(socket.data.deviceId);
+            }
+
+            // Room Cleanup
+            const currentRoom = socket.data.currentRoom;
+            const dId = socket.data.deviceId;
+            if (currentRoom && dId && roomPresence.has(currentRoom)) {
+                const roomData = roomPresence.get(currentRoom);
+                if (roomData.has(dId)) {
+                    roomData.get(dId).delete(socket.id);
+                    if (roomData.get(dId).size === 0) roomData.delete(dId);
+                }
+                if (roomData.size === 0) roomPresence.delete(currentRoom);
+
+                const userCount = getRoomUserCount(currentRoom);
+                logger.info(`👋 Device ${dId.substring(0, 8)} left room ${currentRoom}. New count: ${userCount}`);
+
+                // Immediate broadcast
+                await broadcastRoomUpdate(currentRoom, 'user_count', userCount);
+
+                // Additional delayed broadcast to ensure all clients receive the update
+                setTimeout(() => {
+                    broadcastRoomUpdate(currentRoom, 'user_count', getRoomUserCount(currentRoom));
+                }, 100);
+            }
+        } catch (error) {
+            logger.error('Error in disconnect handler:', error);
         }
     });
 });

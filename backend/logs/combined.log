@@ -1241,3 +1241,50 @@
 {"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T12:53:19.362Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:53:19.844Z"}
 {"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 1","timestamp":"2026-01-31T12:53:38.057Z"}
+{"level":"info","message":"🚀 Server running on port 3000","timestamp":"2026-01-31T14:52:16.511Z"}
+{"level":"info","message":"🌍 Environment: development","timestamp":"2026-01-31T14:52:16.522Z"}
+{"level":"info","message":"💾 Database: MongoDB","timestamp":"2026-01-31T14:52:16.522Z"}
+{"level":"info","message":"🗄️ Storage: Cloudflare R2","timestamp":"2026-01-31T14:52:16.522Z"}
+{"level":"info","message":"🧠 Real-Time: In-Memory Adapter","timestamp":"2026-01-31T14:52:16.522Z"}
+{"level":"info","message":"⏱️ Text Expiry: 10 Minutes | File Expiry: 2 Minutes","timestamp":"2026-01-31T14:52:16.523Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-31T14:52:17.047Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:49.431Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:49.800Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:50.037Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:50.249Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:50.889Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:51.839Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:53.670Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:54.152Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:52:54.199Z"}
+{"level":"info","message":"Call request: dev_6a6lh2goxml23glh9 → dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T14:52:59.956Z"}
+{"level":"info","message":"Call ended: dev_6a6lh2goxml23glh9 ↔ dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T14:53:14.411Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 1","timestamp":"2026-01-31T14:53:17.317Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:53:17.734Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T14:53:36.863Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T14:53:36.872Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T14:53:36.886Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T14:53:36.889Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T14:53:36.892Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T14:53:36.921Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 2","timestamp":"2026-01-31T14:53:36.922Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 1","timestamp":"2026-01-31T14:53:36.923Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 0","timestamp":"2026-01-31T14:53:53.137Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T14:53:53.482Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:02:48.865Z"}
+{"level":"info","message":"✅ Room local-room CLOSED/DELETED.","timestamp":"2026-01-31T15:02:51.212Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:02:55.990Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 0","timestamp":"2026-01-31T15:11:43.969Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:11:44.340Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room-2jrl. New count: 0","timestamp":"2026-01-31T15:18:49.948Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:18:50.319Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room-2jrl. New count: 0","timestamp":"2026-01-31T15:21:29.045Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:21:57.762Z"}
+{"level":"info","message":"✅ Room local-room-2jrl CLOSED/DELETED.","timestamp":"2026-01-31T15:31:33.540Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:32:00.891Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room-2jrl. New count: 0","timestamp":"2026-01-31T15:32:02.190Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:32:08.831Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room-2jrl. New count: 0","timestamp":"2026-01-31T15:32:10.257Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:32:12.726Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room-2jrl. New count: 0","timestamp":"2026-01-31T15:33:42.193Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T15:33:42.564Z"}
