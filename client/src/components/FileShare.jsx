@@ -54,117 +54,119 @@ const FileShare = React.memo(({ files, onUpload, onDeleteFile, isUploading, uplo
         , []);
 
     return (
-        <div className="bg-[#0A0A0A] rounded-2xl shadow-2xl border border-white/5 overflow-hidden fade-in">
-            {/* Header with icon */}
-            <div className="p-4 md:p-6 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#20B2AA] rounded-xl flex items-center justify-center text-black shadow-[0_0_15px_-3px_rgba(32,178,170,0.4)]" aria-hidden="true">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                        </svg>
-                    </div>
-                    <h2 className="text-2xl font-bold text-white tracking-tight">Files</h2>
-                </div>
-            </div>
+        <div className="flex flex-col gap-6 fade-in h-full">
+            {/* Upload Zone - Massive Glass Panel */}
+            <div
+                {...getRootProps()}
+                className={`
+                    relative group transition-all duration-300 rounded-3xl overflow-hidden
+                    ${isDragActive ? 'scale-[1.02] shadow-[0_0_50px_-10px_rgba(32,178,170,0.3)]' : ''}
+                `}
+                role="button"
+                aria-label="File upload zone"
+                tabIndex={isConnected && !isUploading ? 0 : -1}
+            >
+                <input {...getInputProps()} aria-label="File input" />
 
-            {/* Upload Zone */}
-            <div className="p-4 md:p-6 border-b border-white/5">
-                <div
-                    {...getRootProps()}
-                    className={`border-2 border-dashed rounded-xl p-8 md:p-12 text-center cursor-pointer transition-all duration-300
-                        ${!isConnected || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
-                        ${isDragActive
-                            ? 'border-[#20B2AA] bg-[#20B2AA]/10 scale-[1.02] shadow-[0_0_20px_-5px_rgba(32,178,170,0.3)]'
-                            : 'border-white/10 hover:border-[#20B2AA]/50 hover:bg-white/5'}`}
-                    role="button"
-                    aria-label="File upload zone"
-                    tabIndex={isConnected && !isUploading ? 0 : -1}
-                >
-                    <input {...getInputProps()} aria-label="File input" />
+                {/* Background Glow */}
+                <div className={`absolute inset-0 transition-opacity duration-300 ${isDragActive ? 'bg-[#20B2AA]/20 opacity-100' : 'bg-white/5 opacity-50 group-hover:opacity-100'
+                    }`} />
 
+                {/* Animated Border */}
+                <div className={`absolute inset-0 border-2 border-dashed rounded-3xl transition-colors duration-300 ${isDragActive ? 'border-[#20B2AA] animate-pulse' : 'border-white/10 group-hover:border-[#20B2AA]/50'
+                    }`} />
+
+                <div className="relative z-10 p-8 md:p-14 flex flex-col items-center justify-center text-center min-h-[260px]">
                     {isUploading ? (
-                        <div className="space-y-4">
-                            <div className="text-[#20B2AA] font-bold animate-pulse" role="status" aria-live="polite">
-                                Uploading... {uploadProgress}%
+                        <div className="w-full max-w-xs space-y-4">
+                            <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                                <svg className="w-full h-full text-[#20B2AA] animate-spin" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span className="absolute text-xs font-bold">{uploadProgress}%</span>
                             </div>
-                            <div className="max-w-xs mx-auto">
-                                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-                                    <div
-                                        className="bg-[#20B2AA] h-2 rounded-full transition-all duration-300 shadow-[0_0_10px_#20B2AA]"
-                                        style={{ width: `${uploadProgress}%` }}
-                                        role="progressbar"
-                                        aria-valuenow={uploadProgress}
-                                        aria-valuemin="0"
-                                        aria-valuemax="100"
-                                    ></div>
-                                </div>
-                            </div>
+                            <div className="text-lg font-bold text-white animate-pulse">Uploading...</div>
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            <div className="text-5xl mb-4 grayscale hover:grayscale-0 transition-all duration-300" role="img" aria-label="Upload icon">📎</div>
-                            <p className="text-gray-400 font-medium">
-                                {!isConnected ? "Not connected to server" :
-                                    isDragActive ? "Drop the file here..." :
-                                        "Drag & drop a file here, or click to select"}
-                            </p>
-                            <p className="text-xs text-gray-600 font-mono mt-2">Max file size: 100MB</p>
+                        <div className="space-y-4 group-hover:-translate-y-2 transition-transform duration-300">
+                            <div className={`w-20 h-20 mx-auto bg-black/40 rounded-full flex items-center justify-center border border-white/10 transition-all duration-300 ${isDragActive ? 'scale-110 border-[#20B2AA] text-[#20B2AA] shadow-[0_0_20px_rgba(32,178,170,0.3)]' : 'text-gray-400 group-hover:text-white group-hover:border-white/30'
+                                }`}>
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
+                                    {isDragActive ? 'Drop to Upload!' : 'Upload Files'}
+                                </h3>
+                                <p className="text-gray-500 text-sm md:text-base max-w-[200px] mx-auto">
+                                    Drag & drop or click to browse
+                                </p>
+                            </div>
+                            <span className="inline-block px-3 py-1 bg-white/5 rounded-lg text-[10px] text-gray-500 font-mono border border-white/5">
+                                Max 100MB
+                            </span>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Files List */}
-            <div className="p-4 md:p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
+            {/* Files Grid */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1">
                 {files.length > 0 ? (
-                    <div className="space-y-4" role="list" aria-label="Shared files">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-24 md:pb-0">
                         {files.slice().reverse().map((file) => (
-                            <div key={file.id} className="group p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 hover:bg-white/[0.07] transition-all fade-in relative" role="listitem">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className="text-3xl flex-shrink-0" role="img" aria-label={`${file.originalName} file`}>
-                                            {getFileIcon(file.originalName)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-gray-200 truncate tracking-wide" title={file.originalName}>
-                                                {file.originalName}
-                                            </p>
-                                            <p className="text-[10px] text-gray-500 font-mono mt-1 uppercase tracking-wider">
-                                                {formatBytes(file.size)} • {new Date(file.uploadedAt).toLocaleTimeString()}
-                                            </p>
+                            <div key={file.id} className="glass-panel p-4 rounded-2xl group relative hover:bg-white/[0.07] transition-all duration-300 hover:-translate-y-1">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center text-2xl border border-white/10 group-hover:border-white/20 transition-colors">
+                                        {getFileIcon(file.originalName)}
+                                    </div>
+                                    <div className="flex-1 min-w-0 py-0.5">
+                                        <h4 className="font-bold text-gray-200 truncate pr-8" title={file.originalName}>
+                                            {file.originalName}
+                                        </h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] font-bold text-[#20B2AA] bg-[#20B2AA]/10 px-1.5 py-0.5 rounded">
+                                                {formatBytes(file.size)}
+                                            </span>
+                                            <span className="text-[10px] text-gray-600 font-mono uppercase">
+                                                {new Date(file.uploadedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <a
-                                            href={`${downloadUrl}${file.downloadUrl}`}
-                                            download
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex-shrink-0 px-5 py-2 bg-[#20B2AA] text-black rounded-lg font-bold hover:bg-[#1C9D96] transition-all shadow-lg shadow-[#20B2AA]/20 disabled:opacity-40 disabled:cursor-not-allowed text-xs uppercase tracking-wider"
-                                            aria-label={`Download ${file.originalName}`}
-                                        >
-                                            Download
-                                        </a>
-                                        <button
-                                            onClick={() => onDeleteFile(file.id)}
-                                            className="p-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                                            title="Delete file"
-                                            aria-label={`Delete ${file.originalName}`}
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/5">
+                                    <a
+                                        href={`${downloadUrl}${file.downloadUrl}`}
+                                        download
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 py-2 bg-gradient-to-r from-white/5 to-white/10 hover:from-[#20B2AA] hover:to-[#1C9D96] hover:text-black rounded-xl text-xs font-bold uppercase tracking-wider text-center transition-all flex items-center justify-center gap-2 group/btn border border-white/5 hover:border-transparent"
+                                    >
+                                        <span>Download</span>
+                                        <svg className="w-3.5 h-3.5 group-hover/btn:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                    </a>
+                                    <button
+                                        onClick={() => onDeleteFile(file.id)}
+                                        className="p-2 rounded-xl text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                        title="Delete"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-16 opacity-50">
-                        <div className="text-6xl mb-4 grayscale" role="img" aria-label="Empty state">📁</div>
-                        <p className="text-gray-500 font-medium">No files shared yet.</p>
-                        <p className="text-xs text-gray-600 mt-1">Upload a file to share with the room!</p>
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-center opacity-40 min-h-[300px]">
+                        <div className="text-6xl mb-4 grayscale" role="img" aria-label="Empty state">📂</div>
+                        <p className="text-gray-400 font-medium">No files shared yet</p>
                     </div>
                 )}
             </div>

@@ -3,59 +3,51 @@ import PropTypes from 'prop-types';
 
 const RoomInfo = React.memo(({ roomId, userCount, onCopyRoom, onCloseRoom, isPrivate }) => {
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-                {/* Room ID Badge */}
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-400 uppercase text-[10px] font-bold tracking-widest">Room Link:</span>
-                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-2 rounded-xl group transition-all hover:border-[#20B2AA]/30">
-                        <code className="font-mono text-sm text-[#20B2AA] font-bold select-all tracking-wider">
-                            {roomId || <span className="bg-white/10 animate-pulse rounded w-20 h-4 inline-block"></span>}
+        <div className="w-full flex items-center justify-between bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-2 md:p-3 shadow-2xl animate-scale-in">
+            {/* Left: Room Status */}
+            <div className="flex items-center gap-3 pl-2">
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none mb-1">Current Room</span>
+                    <div className="flex items-center gap-2">
+                        <code className="text-xl md:text-2xl font-orbitron text-white tracking-wider">
+                            {roomId || '...'}
                         </code>
-                        {roomId && (
-                            <button
-                                onClick={() => {
-                                    const shareUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${roomId}`;
-                                    onCopyRoom(shareUrl);
-                                }}
-                                className="p-1.5 rounded-lg transition-all text-gray-500 hover:text-white hover:bg-white/10 active:scale-95 border border-transparent hover:border-white/10"
-                                title="Copy Shareable Link"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                                </svg>
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Online Badge */}
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-400 uppercase text-[10px] font-bold tracking-widest">Online:</span>
-                    <div className="flex items-center gap-2 bg-[#20B2AA]/5 border border-[#20B2AA]/20 px-3 py-2 rounded-xl">
-                        <span className="w-1.5 h-1.5 bg-[#20B2AA] rounded-full animate-pulse shadow-[0_0_8px_#20B2AA]"></span>
-                        <span className="font-bold text-[#20B2AA] text-sm" aria-label={`${userCount} users online`}>
-                            {userCount}/100
-                        </span>
+                        <div className="flex items-center gap-1.5 bg-[#20B2AA]/10 px-2 py-0.5 rounded-full border border-[#20B2AA]/20">
+                            <span className="w-1.5 h-1.5 bg-[#20B2AA] rounded-full animate-pulse shadow-[0_0_6px_#20B2AA]"></span>
+                            <span className="text-[10px] font-bold text-[#20B2AA]">{userCount} Online</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Exit/Close Button */}
-            {roomId && (
-                <div className="flex justify-end">
-                    <button
-                        onClick={onCloseRoom}
-                        className="text-[10px] font-bold uppercase tracking-widest text-red-400 hover:text-red-300 hover:bg-red-500/10 bg-red-500/5 border border-red-500/10 px-4 py-2.5 rounded-xl transition-all flex items-center gap-2"
-                        title="Exit this room"
-                    >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Exit Room
-                    </button>
-                </div>
-            )}
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2">
+                {roomId && (
+                    <>
+                        <button
+                            onClick={() => {
+                                const shareUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${roomId}`;
+                                onCopyRoom(shareUrl);
+                            }}
+                            className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/5 hover:border-white/20 transition-all flex items-center justify-center active:scale-95"
+                            title="Copy Link"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={onCloseRoom}
+                            className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/10 hover:border-red-500/30 transition-all flex items-center justify-center active:scale-95"
+                            title="Exit Room"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                        </button>
+                    </>
+                )}
+            </div>
         </div>
     );
 });

@@ -18,6 +18,7 @@ import { CallProvider } from '../context/CallContext';
 import IncomingCallModal from './call/IncomingCallModal';
 import ActiveCallView from './call/ActiveCallView';
 import CallButton from './call/CallButton';
+import Dock from './Navigation/Dock';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -40,7 +41,6 @@ function WebApp() {
     // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showCallMenu, setShowCallMenu] = useState(false);
     const [showRandomChat, setShowRandomChat] = useState(false);
 
@@ -371,229 +371,88 @@ function WebApp() {
             <div className="min-h-screen bg-black text-white selection:bg-[#20B2AA]/30">
                 <ToastContainer {...toastOptions} theme="dark" />
 
-                <header className="bg-black/80 border-b border-white/5 py-3 md:py-4 px-4 md:px-6 sticky top-0 z-50 backdrop-blur-xl">
-                    <div className="max-w-7xl mx-auto flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Logo className="w-8 h-8 md:w-10 md:h-10 text-white" />
-                            <div className="flex items-center gap-3 ml-4">
+                <header className="bg-transparent pt-safe px-4 md:px-6 sticky top-0 z-50 pointer-events-none">
+                    <div className="max-w-7xl mx-auto flex items-center justify-between py-4 pointer-events-auto">
+                        <div className="flex items-center gap-3 bg-black/40 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full shadow-xl">
+                            <Logo className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                            <div className="flex items-center gap-2 border-l border-white/10 pl-3">
                                 {isConnected ? (
-                                    <span className="flex items-center gap-2 text-xs text-[#20B2AA] font-medium tracking-wide bg-[#20B2AA]/10 px-2 py-1 rounded-full border border-[#20B2AA]/20" title="Connected">
+                                    <span className="flex items-center gap-2 text-[10px] md:text-xs text-[#20B2AA] font-bold tracking-wide">
                                         <span className="w-1.5 h-1.5 bg-[#20B2AA] rounded-full animate-pulse shadow-[0_0_8px_#20B2AA]"></span>
                                         Connected
                                     </span>
                                 ) : (
-                                    <span className="flex items-center gap-2 text-xs text-red-500 font-medium tracking-wide bg-red-500/10 px-2 py-1 rounded-full border border-red-500/20" title="Disconnected">
+                                    <span className="flex items-center gap-2 text-[10px] md:text-xs text-red-500 font-bold tracking-wide">
                                         <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                                        Disconnected
+                                        Offline
                                     </span>
                                 )}
                             </div>
                         </div>
-                        <nav className="hidden md:flex items-center gap-3 text-sm font-medium" role="navigation" aria-label="Main navigation">
-                            <button
-                                onClick={() => setShowJoinModal(true)}
-                                className="px-4 py-2 bg-white/5 text-gray-300 rounded-lg hover:bg-white/10 hover:text-white transition border border-white/5 backdrop-blur-sm"
-                            >
-                                Join Room
-                            </button>
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="px-4 py-2 bg-[#20B2AA] text-black rounded-lg hover:bg-[#1C9D96] transition shadow-[0_0_15px_-3px_rgba(32,178,170,0.3)] hover:shadow-[0_0_20px_-3px_rgba(32,178,170,0.5)] active:scale-95 duration-200 font-bold"
-                            >
-                                + New Room
-                            </button>
 
-                            {/* Random Chat Button */}
+                        {/* Video Call Button (kept in header for quick access) */}
+                        <div className="relative">
                             <button
-                                onClick={() => setShowRandomChat(true)}
-                                className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 hover:from-purple-500/30 hover:to-indigo-500/30 text-purple-200 rounded-lg transition border border-purple-500/20 flex items-center gap-2 group"
+                                onClick={() => setShowCallMenu(!showCallMenu)}
+                                className="relative w-10 h-10 md:w-auto md:px-4 md:py-2 bg-black/40 text-gray-300 rounded-full hover:bg-white/10 hover:text-white transition border border-white/10 flex items-center justify-center gap-2 backdrop-blur-xl shadow-xl"
                             >
-                                <span className="group-hover:scale-110 transition-transform">🌍</span>
-                                <span className="text-white/90">Random Chat</span>
-                            </button>
-
-                            {/* Video Call Button */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowCallMenu(!showCallMenu)}
-                                    className="relative px-4 py-2 bg-white/5 text-gray-300 rounded-lg hover:bg-white/10 hover:text-white transition border border-white/5 flex items-center gap-2"
-                                >
-                                    <svg className="w-4 h-4 text-[#20B2AA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
-                                    Video Call
-                                    {users.length > 1 && (
-                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
-                                            {users.length - 1}
-                                        </span>
-                                    )}
-                                </button>
-
-                                {/* Dropdown Menu */}
-                                {showCallMenu && (
-                                    <div className="absolute right-0 mt-2 w-72 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
-                                        <div className="p-4 border-b border-white/10">
-                                            <h3 className="font-bold text-white">People Nearby ({users.length - 1})</h3>
-                                        </div>
-                                        <div className="max-h-80 overflow-y-auto">
-                                            {users.filter(user => user.id !== deviceId).length > 0 ? (
-                                                users
-                                                    .filter(user => user.id !== deviceId)
-                                                    .map(user => (
-                                                        <div key={user.id} className="p-3 hover:bg-white/5 border-b border-white/5 last:border-0 flex items-center justify-between">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#20B2AA] to-[#1C9D96] flex items-center justify-center text-white text-sm font-bold">
-                                                                    {user.name.charAt(0).toUpperCase()}
-                                                                </div>
-                                                                <span className="text-white text-sm">{user.name}</span>
-                                                            </div>
-                                                            <CallButton userId={user.id} userName={user.name} className="text-xs px-3 py-1.5" />
-                                                        </div>
-                                                    ))
-                                            ) : (
-                                                <div className="p-6 text-center text-gray-500 text-sm">
-                                                    No users online
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                <svg className="w-5 h-5 text-[#20B2AA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span className="hidden md:inline font-medium">Video Call</span>
+                                {users.length > 1 && (
+                                    <span className="absolute -top-1 -right-1 unread-badge w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold shadow-lg">
+                                        {users.length - 1}
+                                    </span>
                                 )}
-                            </div>
-                        </nav>
+                            </button>
 
-                        <button
-                            className="md:hidden p-2 text-gray-400 hover:text-white focus:outline-none"
-                            onClick={() => setShowMobileMenu(!showMobileMenu)}
-                            aria-label="Toggle mobile menu"
-                        >
-                            {showMobileMenu ? (
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            ) : (
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Mobile Menu Backdrop */}
-                    {showMobileMenu && (
-                        <div
-                            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
-                            onClick={() => setShowMobileMenu(false)}
-                        />
-                    )}
-
-                    {showMobileMenu && (
-                        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0F1629] border-b border-white/10 shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200 overflow-hidden">
-                            <div className="flex flex-col p-4 space-y-3">
-                                <button
-                                    onClick={() => { setShowJoinModal(true); setShowMobileMenu(false); }}
-                                    className="w-full text-left px-5 py-4 bg-white/5 hover:bg-white/10 rounded-2xl font-medium text-gray-200 transition flex items-center justify-between group"
-                                >
-                                    <span>Join Room</span>
-                                    <svg className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => { setShowCreateModal(true); setShowMobileMenu(false); }}
-                                    className="w-full text-left px-5 py-4 bg-[#20B2AA]/10 text-[#20B2AA] hover:bg-[#20B2AA]/20 rounded-2xl font-bold transition flex items-center justify-between group border border-[#20B2AA]/20"
-                                >
-                                    <span>+ New Room</span>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => { setShowRandomChat(true); setShowMobileMenu(false); }}
-                                    className="w-full text-left px-5 py-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-purple-200 hover:from-purple-500/20 hover:to-indigo-500/20 rounded-2xl font-bold transition flex items-center justify-between group border border-purple-500/20"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xl">🌍</span>
-                                        <span>Random Video Chat</span>
+                            {/* Dropdown Menu */}
+                            {showCallMenu && (
+                                <div className="absolute right-0 mt-3 w-72 bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 glass-panel">
+                                    <div className="p-4 border-b border-white/5">
+                                        <h3 className="font-bold text-white text-sm">People Nearby ({users.length - 1})</h3>
                                     </div>
-                                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                    </svg>
-                                </button>
-
-                                {/* Video Call in Mobile Menu */}
-                                <div className="pt-2">
-                                    <div className="px-5 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Users ({users.length - 1})</div>
-                                    <div className="space-y-2 mt-1">
+                                    <div className="max-h-64 overflow-y-auto custom-scrollbar">
                                         {users.filter(user => user.id !== deviceId).length > 0 ? (
                                             users
                                                 .filter(user => user.id !== deviceId)
                                                 .map(user => (
-                                                    <div key={user.id} className="px-5 py-3 bg-white/5 rounded-2xl flex items-center justify-between">
+                                                    <div key={user.id} className="p-3 hover:bg-white/5 border-b border-white/5 last:border-0 flex items-center justify-between transition-colors">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#20B2AA] to-[#1C9D96] flex items-center justify-center text-white text-sm font-bold">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#20B2AA] to-[#1C9D96] flex items-center justify-center text-white text-xs font-bold shadow-lg">
                                                                 {user.name.charAt(0).toUpperCase()}
                                                             </div>
-                                                            <span className="text-white text-sm font-medium">{user.name}</span>
+                                                            <span className="text-gray-200 text-sm font-medium">{user.name}</span>
                                                         </div>
-                                                        <CallButton userId={user.id} userName={user.name} className="text-xs px-3 py-1.5" />
+                                                        <CallButton userId={user.id} userName={user.name} className="text-[10px] px-3 py-1.5 h-8" />
                                                     </div>
                                                 ))
                                         ) : (
-                                            <div className="px-5 py-4 text-gray-500 text-xs text-center bg-white/5 rounded-2xl border border-dashed border-white/5">
-                                                No one online to call
+                                            <div className="p-8 text-center text-gray-500 text-xs">
+                                                <div className="text-2xl mb-2 opacity-30">🔭</div>
+                                                No users online
                                             </div>
                                         )}
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </header>
 
-                <div className="bg-black border-b border-white/5 py-3 md:py-4 px-4 md:px-6 relative overflow-hidden">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[#20B2AA]/5 rounded-full blur-[100px] pointer-events-none" />
-                    <div className="max-w-7xl mx-auto relative z-10">
-                        <RoomInfo
-                            roomId={roomId}
-                            userCount={userCount}
-                            onCopyRoom={copyToClipboard}
-                            onCloseRoom={handleCloseRoom}
-                            isPrivate={false}
-                        />
-                    </div>
+                <div className="max-w-4xl mx-auto px-4 relative z-10 pt-2 pb-6">
+                    <RoomInfo
+                        roomId={roomId}
+                        userCount={userCount}
+                        onCopyRoom={copyToClipboard}
+                        onCloseRoom={handleCloseRoom}
+                        isPrivate={false}
+                    />
                 </div>
 
-                <main className="max-w-4xl mx-auto px-4 py-6 md:py-12 relative z-10">
-                    <div className="flex gap-4 mb-8 p-1 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm" role="tablist" aria-label="Content tabs">
-                        <button
-                            role="tab"
-                            aria-selected={activeTab === 'text'}
-                            onClick={() => handleTabChange('text')}
-                            className={`flex-1 justify-center flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${activeTab === 'text'
-                                ? 'bg-[#20B2AA] text-black shadow-lg shadow-[#20B2AA]/20 font-bold'
-                                : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'
-                                }`}
-                        >
-                            <svg className={`w-5 h-5 ${activeTab === 'text' ? 'text-black' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                            </svg>
-                            Text Chat
-                        </button>
-                        <button
-                            role="tab"
-                            aria-selected={activeTab === 'files'}
-                            onClick={() => handleTabChange('files')}
-                            className={`flex-1 justify-center flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${activeTab === 'files'
-                                ? 'bg-[#20B2AA] text-black shadow-lg shadow-[#20B2AA]/20 font-bold'
-                                : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'
-                                }`}
-                        >
-                            <svg className={`w-5 h-5 ${activeTab === 'files' ? 'text-black' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            File Transfer
-                        </button>
-                    </div>
+                <main className="max-w-4xl mx-auto px-4 pb-32 md:pb-40 relative z-10 min-h-[60vh]">
+
 
                     <div className="fade-in min-h-[400px]">
                         {activeTab === 'text' ? (
@@ -652,6 +511,14 @@ function WebApp() {
                     onJoinRoom={handleManualJoin}
                     socket={socketRef.current}
                     deviceId={deviceId}
+                />
+
+                <Dock
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    onNewRoom={() => setShowCreateModal(true)}
+                    onJoinRoom={() => setShowJoinModal(true)}
+                    onRandomChat={() => setShowRandomChat(true)}
                 />
 
                 {showRandomChat && (

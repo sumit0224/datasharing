@@ -2,152 +2,143 @@
 
 :root {
     color-scheme: dark;
+    /* Premium Dark Theme Variables */
+    --background: 0 0% 0%;
+    /* #000000 */
+    --surface: 240 10% 4%;
+    /* #09090b - Slightly lighter black for cards */
+    --surface-highlight: 240 5% 10%;
+    /* #18181b - Hover states */
+    --primary: 171 70% 40%;
+    /* #20B2AA - Light Sea Green (Brand) */
+    --primary-glow: 171 70% 40%;
+    --text-primary: 0 0% 98%;
+    /* #fafafa */
+    --text-secondary: 240 5% 65%;
+    /* #a1a1aa */
+
+    /* Safe Area Variables */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 html,
 body {
-    background-color: #000000;
-    /* Fixed: Black to match theme */
-    color: #ffffff;
-    overscroll-behavior: none;
+    background-color: hsl(var(--background));
+    color: hsl(var(--text-primary));
+    overscroll-behavior-y: none;
     /* Prevents bounce on iOS */
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
     -webkit-tap-highlight-color: transparent;
-    /* Remove gray tap highlight on iOS */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
-
-.font-orbitron {
-    font-family: 'Orbitron', sans-serif;
-}
-
-.font-marker {
-    font-family: 'Permanent Marker', cursive;
-}
-
-/* -----------------------------
-   iOS Viewport & Safe Area Fixes
------------------------------ */
 
 @layer utilities {
 
-    /* Override Tailwind's default 100vh with iOS-safe units */
-    .h-screen {
-        height: 100vh;
-        /* Fallback */
-        height: 100svh;
-        /* Modern iOS/Android */
+    /* iOS Safe Area Utilities */
+    .pb-safe {
+        padding-bottom: var(--safe-bottom);
     }
 
-    .min-h-screen {
-        min-height: 100vh;
-        /* Fallback */
-        min-height: 100svh;
-        /* Modern iOS/Android */
+    .pt-safe {
+        padding-top: var(--safe-top);
     }
 
-    /* Old iOS Fallback */
-    @supports (-webkit-touch-callout: none) {
-        .h-screen {
-            height: -webkit-fill-available;
-        }
+    .mb-safe {
+        margin-bottom: var(--safe-bottom);
+    }
 
-        .min-h-screen {
-            min-height: -webkit-fill-available;
-        }
+    /* Premium Glassmorphism */
+    .glass-panel {
+        background: rgba(20, 20, 20, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .glass-dock {
+        background: rgba(10, 10, 10, 0.8);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Text Gradients */
+    .text-gradient-primary {
+        background: linear-gradient(135deg, #20B2AA, #2dd4bf);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* Hiding Scrollbars */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* Custom Scrollbar for content */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(255, 255, 255, 0.3);
     }
 }
 
-/* -----------------------------
-   Custom Scrollbar
------------------------------ */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.5);
-    border-radius: 20px;
-    transition: background-color 0.2s;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(156, 163, 175, 0.8);
-}
-
-/* -----------------------------
-   Animations
------------------------------ */
-@keyframes fadeIn {
+/* Animations */
+@keyframes dock-slide-up {
     from {
+        transform: translateY(100%);
         opacity: 0;
-        transform: translateY(10px);
     }
 
     to {
-        opacity: 1;
         transform: translateY(0);
+        opacity: 1;
     }
 }
 
-.fade-in {
-    animation: fadeIn 0.3s ease-out;
+.animate-dock-in {
+    animation: dock-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes slideDown {
+@keyframes scale-in {
     from {
+        transform: scale(0.95);
         opacity: 0;
-        transform: translateY(-10px);
     }
 
     to {
+        transform: scale(1);
         opacity: 1;
-        transform: translateY(0);
     }
 }
 
-.slide-down {
-    animation: slideDown 0.3s ease-out;
+.animate-scale-in {
+    animation: scale-in 0.2s ease-out forwards;
 }
 
-.transition-smooth {
-    transition: all 0.2s ease-in-out;
-}
-
-/* Glassmorphism Utility */
-.glass-morphism {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Mobile Improvements */
-@media (max-width: 640px) {
-    .custom-padding {
-        padding-left: 1.25rem !important;
-        padding-right: 1.25rem !important;
-    }
-    
-    button:not(.no-touch), a:not(.no-touch) {
-        min-height: 44px;
-        min-width: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .mobile-stack {
-        flex-direction: column !important;
-    }
-}
-
-.animate-in {
-    animation-fill-mode: forwards;
+/* Font Imports handled in HTML or via font-face if needed, assumming system/Google fonts loaded */
+.font-orbitron {
+    font-family: 'Orbitron', sans-serif;
 }
