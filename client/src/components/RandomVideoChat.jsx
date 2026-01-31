@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CallSocketService from '../services/CallSocketService';
 import WebRTCService from '../services/WebRTCService';
-import './RandomVideoChat.scss';
+// SCSS removed in favor of Tailwind
 import Globe3D from './Globe3D';
 
 const RandomVideoChat = ({ socket, deviceId, onClose }) => {
@@ -225,36 +225,43 @@ const RandomVideoChat = ({ socket, deviceId, onClose }) => {
 
     if (status === 'idle') {
         return (
-            <div className="random-video-chat">
-                <button className="exit-random-chat" onClick={onClose} title="Exit">
+            <div className="fixed inset-0 z-[9999] bg-black text-white font-sans overflow-hidden w-screen h-screen">
+                <button
+                    className="absolute top-6 right-6 z-[100] bg-black/50 border border-white/10 text-white w-11 h-11 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200 backdrop-blur-sm hover:bg-white/10 hover:rotate-90"
+                    onClick={onClose}
+                    title="Exit"
+                >
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
-                <div className="idle-screen">
-                    <div className="hero-section fade-in">
-                        <div className="globe-icon">
+                <div className="flex items-center justify-center h-full">
+                    <div className="text-center z-10 relative text-white px-6 md:px-0 animate-[fadeIn_0.4s_ease-out_forwards]">
+                        <div className="inline-block mb-6 drop-shadow-[0_0_30px_rgba(32,178,170,0.3)]">
                             <Globe3D size="200px" wireframe={true} color="#20B2AA" />
                         </div>
-                        <h1>Random Video Chat</h1>
-                        <p>Connect with people around the world instantly</p>
+                        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-white">Random Video Chat</h1>
+                        <p className="text-lg md:text-xl mb-10 opacity-80 font-normal text-white/70">Connect with people around the world instantly</p>
 
-                        <button className="start-button" onClick={startSearch}>
+                        <button
+                            className="bg-[#20B2AA] text-black border-none py-[18px] px-[50px] text-lg rounded-2xl cursor-pointer shadow-[0_0_20px_-5px_rgba(32,178,170,0.4)] font-bold transition-all duration-200 tracking-wide uppercase hover:bg-[#1C9D96] hover:-translate-y-0.5 hover:shadow-[0_0_30px_-5px_rgba(32,178,170,0.6)] active:translate-y-[1px] w-full max-w-xs md:w-auto"
+                            onClick={startSearch}
+                        >
                             🎥 Start Video Chat
                         </button>
 
-                        <div className="features">
-                            <div className="feature">
-                                <span className="icon">⚡</span>
-                                <span>Instant Matching</span>
+                        <div className="flex gap-6 mt-[60px] justify-center flex-wrap md:flex-nowrap">
+                            <div className="flex flex-col items-center gap-3 bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-md min-w-[140px] transition-transform duration-200 hover:-translate-y-1 hover:bg-white/[0.08] hover:border-[#20B2AA]/30">
+                                <span className="text-2xl">⚡</span>
+                                <span className="text-sm font-semibold text-[#20B2AA] opacity-90">Instant Matching</span>
                             </div>
-                            <div className="feature">
-                                <span className="icon">🔒</span>
-                                <span>Anonymous</span>
+                            <div className="flex flex-col items-center gap-3 bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-md min-w-[140px] transition-transform duration-200 hover:-translate-y-1 hover:bg-white/[0.08] hover:border-[#20B2AA]/30">
+                                <span className="text-2xl">🔒</span>
+                                <span className="text-sm font-semibold text-[#20B2AA] opacity-90">Anonymous</span>
                             </div>
-                            <div className="feature">
-                                <span className="icon">🌐</span>
-                                <span>Global</span>
+                            <div className="flex flex-col items-center gap-3 bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-md min-w-[140px] transition-transform duration-200 hover:-translate-y-1 hover:bg-white/[0.08] hover:border-[#20B2AA]/30">
+                                <span className="text-2xl">🌐</span>
+                                <span className="text-sm font-semibold text-[#20B2AA] opacity-90">Global</span>
                             </div>
                         </div>
                     </div>
@@ -265,21 +272,28 @@ const RandomVideoChat = ({ socket, deviceId, onClose }) => {
 
     if (status === 'searching') {
         return (
-            <div className="random-video-chat">
-                <div className="searching-screen">
-                    <div className="search-container fade-in">
+            <div className="fixed inset-0 z-[9999] bg-black text-white font-sans overflow-hidden w-screen h-screen">
+                <div className="flex items-center justify-center h-full">
+                    <div className="text-center text-white animate-[fadeIn_0.4s_ease-out_forwards]">
                         <div className="mb-8 inline-block">
                             <Globe3D size="160px" variant="online" color="#20B2AA" />
                         </div>
 
-                        <h2>Finding a partner...</h2>
-                        <p className="online-count">👥 {searchingCount > 0 ? `${searchingCount} people online` : 'Connecting...'}</p>
+                        <h2 className="text-[28px] font-bold mb-4">Finding a partner...</h2>
+                        <p className="text-base text-[#20B2AA] mb-10 bg-[#20B2AA]/10 px-4 py-2 rounded-full inline-block border border-[#20B2AA]/20">
+                            👥 {searchingCount > 0 ? `${searchingCount} people online` : 'Connecting...'}
+                        </p>
 
-                        <div className="search-tips">
-                            <p>💡 Tip: Please enable your camera and microphone permissions for the connection to work.</p>
+                        <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 mb-10 border border-white/10 max-w-[400px] mx-auto">
+                            <p className="text-sm m-0 leading-relaxed text-white/70">
+                                💡 Tip: Please enable your camera and microphone permissions for the connection to work.
+                            </p>
                         </div>
 
-                        <button className="cancel-button" onClick={stopSearch}>
+                        <button
+                            className="bg-transparent text-white/70 border border-white/20 py-3 px-[30px] text-sm rounded-xl cursor-pointer transition-all duration-200 font-semibold uppercase tracking-wide hover:bg-white/10 hover:text-white hover:border-white/40"
+                            onClick={stopSearch}
+                        >
                             Cancel Search
                         </button>
                     </div>
@@ -290,39 +304,39 @@ const RandomVideoChat = ({ socket, deviceId, onClose }) => {
 
     // Matched or In_Call
     return (
-        <div className="random-video-chat">
-            <div className="video-call-screen">
+        <div className="fixed inset-0 z-[9999] bg-black text-white font-sans overflow-hidden w-screen h-screen">
+            <div className="relative w-full h-full bg-black">
                 {/* Remote Video (Full Screen) */}
-                <div className="remote-video-container">
+                <div className="w-full h-full relative">
                     <video
                         ref={remoteVideoRef}
                         autoPlay
                         playsInline
-                        className="remote-video"
+                        className="w-full h-full object-cover transform-none"
                     />
 
                     {/* Connection Status */}
-                    <div className="connection-status">
-                        <span className={`status-dot ${connectionState === 'connected' ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                    <div className="absolute top-6 left-6 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 text-xs font-semibold border border-white/10">
+                        <span className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px] ${connectionState === 'connected' ? 'bg-[#10b981] shadow-[#10b981]' : 'bg-yellow-500 shadow-yellow-500'}`}></span>
                         {connectionState === 'connected' ? 'Connected' : 'Connecting...'}
                     </div>
 
                     {/* Local Video (PIP) */}
-                    <div className="local-video-pip">
+                    <div className="absolute bottom-[120px] right-6 w-[160px] md:bottom-[100px] md:right-4 md:w-[100px] aspect-video rounded-xl overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.8)] border border-white/20 bg-[#111] transition-all duration-300 z-10 hover:scale-105 hover:border-[#20B2AA]">
                         <video
                             ref={localVideoRef}
                             autoPlay
                             playsInline
                             muted
-                            className="local-video"
+                            className="w-full h-full object-cover scale-x-[-1]"
                         />
                     </div>
                 </div>
 
                 {/* Controls */}
-                <div className="controls-panel">
+                <div className="absolute bottom-[30px] left-1/2 -translate-x-1/2 flex gap-3 bg-[#0a0a0a]/90 backdrop-blur-xl p-3 md:p-3 rounded-[20px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-20 w-[calc(100%-32px)] md:w-auto justify-between md:justify-center">
                     <button
-                        className={`control-btn ${!isAudioEnabled ? 'active' : ''}`}
+                        className={`w-12 h-12 rounded-xl border-none bg-white/10 text-white text-xl cursor-pointer transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 ${!isAudioEnabled ? '!bg-red-500 text-white' : ''}`}
                         onClick={toggleAudio}
                         title={isAudioEnabled ? "Mute Mic" : "Unmute Mic"}
                     >
@@ -330,7 +344,7 @@ const RandomVideoChat = ({ socket, deviceId, onClose }) => {
                     </button>
 
                     <button
-                        className={`control-btn ${!isVideoEnabled ? 'active' : ''}`}
+                        className={`w-12 h-12 rounded-xl border-none bg-white/10 text-white text-xl cursor-pointer transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 ${!isVideoEnabled ? '!bg-red-500 text-white' : ''}`}
                         onClick={toggleVideo}
                         title={isVideoEnabled ? "Turn Off Camera" : "Turn On Camera"}
                     >
@@ -338,7 +352,7 @@ const RandomVideoChat = ({ socket, deviceId, onClose }) => {
                     </button>
 
                     <button
-                        className="control-btn skip-btn"
+                        className="bg-[#20B2AA] text-black w-auto px-6 text-base font-bold gap-2 hover:bg-[#1C9D96] flex-grow md:flex-grow-0 h-12 rounded-xl border-none cursor-pointer transition-all duration-200 flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0"
                         onClick={skipPartner}
                         title="Skip to next partner"
                     >
@@ -346,7 +360,7 @@ const RandomVideoChat = ({ socket, deviceId, onClose }) => {
                     </button>
 
                     <button
-                        className="control-btn end-btn"
+                        className="bg-red-500/15 text-red-500 border border-red-500/30 w-12 h-12 rounded-xl text-xl cursor-pointer transition-all duration-200 flex items-center justify-center hover:bg-red-500 hover:text-white hover:border-red-500 hover:-translate-y-0.5 active:translate-y-0"
                         onClick={endChat}
                         title="End Chat"
                     >
