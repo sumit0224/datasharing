@@ -14,7 +14,7 @@ export const useCall = () => {
 
 export const CallProvider = ({ socket, children }) => {
     // Call State
-    const [callState, setCallState] = useState('idle'); // idle | outgoing | incoming | connecting | active
+    const [callState, setCallState] = useState('idle'); // idle | outgoing | incoming | connecting | active | disconnected
     const [caller, setCaller] = useState(null); // { id, name }
     const [recipient, setRecipient] = useState(null); // { id, name }
     const [localStream, setLocalStream] = useState(null);
@@ -24,6 +24,7 @@ export const CallProvider = ({ socket, children }) => {
     const [callDuration, setCallDuration] = useState(0);
     const [error, setError] = useState(null);
     const [isInitiator, setIsInitiator] = useState(false);
+    const [disconnectReason, setDisconnectReason] = useState(null); // Why call ended
 
     // Services
     const webrtcService = useRef(null);
@@ -175,14 +176,16 @@ export const CallProvider = ({ socket, children }) => {
 
     const handleCallRejected = useCallback(({ recipientId }) => {
         console.log('❌ Call rejected by:', recipientId);
-        setError('Call was rejected');
+        setDisconnectReason('Call was rejected');
         cleanup();
     }, []);
 
     const handleCallEnded = useCallback(({ peerId, reason }) => {
         console.log('📴 Call ended by:', peerId, 'reason:', reason);
         if (reason === 'disconnected') {
-            setError('Call ended: connection lost');
+            setDisconnectReason('Connection lost');
+        } else {
+            setDisconnectReason('Call ended');
         }
         cleanup();
     }, []);
@@ -271,20 +274,25 @@ export const CallProvider = ({ socket, children }) => {
             webrtcService.current.cleanup();
         }
 
-        // Reset state
-        setCallState('idle');
-        setCaller(null);
-        setRecipient(null);
-        setLocalStream(null);
-        setRemoteStream(null);
-        setIsMuted(false);
-        setIsVideoOff(false);
-        setCallDuration(0);
-        setError(null);
-        setIsInitiator(false);
-        currentPeerId.current = null;
+        // Show disconnect state briefly before going to idle
+        setCallState('disconnected');
 
-        console.log('✅ Cleanup complete');
+        // Transition to idle after 2 seconds
+        setTimeout(() => {
+            setCallState('idle');
+            setCaller(null);
+            setRecipient(null);
+            setLocalStream(null);
+            setRemoteStream(null);
+            setIsMuted(false);
+            setIsVideoOff(false);
+            setCallDuration(0);
+            setError(null);
+            setIsInitiator(false);
+            setDisconnectReason(null);
+            currentPeerId.current = null;
+            console.log('✅ Cleanup complete');
+        }, 2000);
     };
 
     const value = {
@@ -298,6 +306,7 @@ export const CallProvider = ({ socket, children }) => {
         isVideoOff,
         callDuration,
         error,
+        disconnectReason,
 
         // Actions
         initiateCall,

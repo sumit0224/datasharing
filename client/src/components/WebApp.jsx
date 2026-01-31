@@ -42,19 +42,28 @@ function WebApp() {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showCallMenu, setShowCallMenu] = useState(false);
 
-    // Stabilized Guest Identity
+    // Stabilized Guest Identity - Wrapped in try-catch for iOS Safari Private Mode
     const { deviceId, guestId } = useMemo(() => {
-        let dId = localStorage.getItem('deviceId');
-        let gId = localStorage.getItem('guestId');
+        let dId = null;
+        let gId = null;
 
-        if (!dId) {
-            dId = 'dev_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-            localStorage.setItem('deviceId', dId);
-        }
+        try {
+            dId = localStorage.getItem('deviceId');
+            gId = localStorage.getItem('guestId');
 
-        if (!gId) {
-            gId = Math.random().toString(36).substring(2, 10);
-            localStorage.setItem('guestId', gId);
+            if (!dId) {
+                dId = 'dev_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+                localStorage.setItem('deviceId', dId);
+            }
+
+            if (!gId) {
+                gId = Math.random().toString(36).substring(2, 10);
+                localStorage.setItem('guestId', gId);
+            }
+        } catch (e) {
+            console.warn('⚠️ LocalStorage not available, using in-memory identity');
+            dId = 'guest_' + Math.random().toString(36).substring(2, 11);
+            gId = 'guest_' + Math.random().toString(36).substring(2, 10);
         }
 
         return { deviceId: dId, guestId: gId };
@@ -110,6 +119,10 @@ function WebApp() {
 
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
+        socket.on('connect_error', (err) => {
+            console.error('⚠️ Socket Connection Error:', err.message);
+            // Don't show toast for every error to avoid spam
+        });
 
         // Fetch initial room info on mount if needed
         fetchRoomInfo();
