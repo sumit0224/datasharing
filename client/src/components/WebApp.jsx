@@ -9,6 +9,7 @@ import TextShare from './TextShare';
 import FileShare from './FileShare';
 import CreateRoomModal from './modals/CreateRoomModal';
 import JoinRoomModal from './modals/JoinRoomModal';
+import LargeFileShare from './LargeFileShare';
 import Logo from './Logo';
 import api from '../api';
 
@@ -33,6 +34,7 @@ function WebApp() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [showP2PModal, setShowP2PModal] = useState(false);
 
     // Stabilized Guest Identity
     const { deviceId, guestId } = useMemo(() => {
@@ -355,6 +357,12 @@ function WebApp() {
                             Join Room
                         </button>
                         <button
+                            onClick={() => setShowP2PModal(true)}
+                            className="px-5 py-2.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl hover:bg-purple-500/20 transition hover:text-purple-300 font-bold tracking-wider"
+                        >
+                            ⚡ P2P Transfer
+                        </button>
+                        <button
                             onClick={() => setShowCreateModal(true)}
                             className="px-5 py-2.5 bg-[#20B2AA] text-black rounded-xl hover:bg-[#1C9D96] transition shadow-[0_0_15px_-3px_rgba(32,178,170,0.3)] hover:shadow-[0_0_20px_-3px_rgba(32,178,170,0.5)] active:scale-95 duration-200"
                         >
@@ -393,6 +401,12 @@ function WebApp() {
                                 className="w-full text-left px-4 py-3 bg-[#20B2AA] text-black hover:bg-[#1C9D96] rounded-xl font-bold transition shadow-lg"
                             >
                                 + New Room
+                            </button>
+                            <button
+                                onClick={() => { setShowP2PModal(true); setShowMobileMenu(false); }}
+                                className="w-full text-left px-4 py-3 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-xl font-medium transition border border-purple-500/20"
+                            >
+                                ⚡ P2P Transfer (Large Files)
                             </button>
                         </div>
                     </div>
@@ -492,6 +506,14 @@ function WebApp() {
                 onClose={() => setShowJoinModal(false)}
                 onJoinRoom={handleManualJoin}
             />
+
+            {showP2PModal && (
+                <LargeFileShare
+                    socket={socketRef.current}
+                    isConnected={isConnected}
+                    onClose={() => setShowP2PModal(false)}
+                />
+            )}
         </div>
     );
 }

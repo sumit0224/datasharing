@@ -115,6 +115,10 @@ async function broadcastRoomUpdate(roomId, eventName, payload) {
     io.to(roomId).emit(eventName, payload);
 }
 
+function sendToRoom(roomId, eventName, payload) {
+    io.to(roomId).emit(eventName, payload);
+}
+
 // --- SOCKET.IO ---
 const io = new Server(server, {
     cors: {
@@ -549,7 +553,114 @@ io.on('connection', (socket) => {
         }
     });
 
+    // --- WEBRTC P2P SIGNALING (Room-Based) ---
+    const p2pRooms = new Map(); // roomId -> [socket.id]
+
+    socket.on('p2p:join', (roomId) => {
+        if (!roomId) return;
+
+        // Ensure strictly separate from main rooms
+        let roomPeers = p2pRooms.get(roomId) || [];
+
+        if (roomPeers.length >= 2) {
+            socket.emit('p2p:error', 'Room is full (Max 2 peers).');
+            return;
+        }
+
+        // Add user
+        if (!roomPeers.includes(socket.id)) {
+            roomPeers.push(socket.id);
+            p2pRooms.set(roomId, roomPeers);
+            socket.join(`p2p_${roomId}`); // Private channel for this P2P session
+            socket.data.p2pRoom = roomId;
+
+            logger.info(`socket ${socket.id} joined P2P room ${roomId}. Count: ${roomPeers.length}`);
+            console.log(`[P2P] Join: ${roomId}, Peers: ${JSON.stringify(roomPeers)}`);
+
+            if (roomPeers.length === 1) {
+                socket.emit('p2p:waiting', 'Waiting for peer to join...');
+            } else if (roomPeers.length === 2) {
+                // Room Ready!
+                const peer1 = roomPeers[0];
+                const peer2 = roomPeers[1];
+                console.log(`[P2P] Room ${roomId} READY. Peers: ${peer1}, ${peer2}`);
+
+                io.to(peer1).emit('p2p:ready', { isInitiator: true, peerId: peer2 });
+                io.to(peer2).emit('p2p:ready', { isInitiator: false, peerId: peer1 });
+            }
+        } else {
+            console.log(`[P2P] Socket ${socket.id} already in room ${roomId}`);
+        }
+    });
+
+    socket.on('p2p:leave', () => {
+        const roomId = socket.data.p2pRoom;
+        if (roomId && p2pRooms.has(roomId)) {
+            const peers = p2pRooms.get(roomId);
+            const updatedPeers = peers.filter(id => id !== socket.id);
+
+            if (updatedPeers.length === 0) {
+                p2pRooms.delete(roomId);
+            } else {
+                p2pRooms.set(roomId, updatedPeers);
+                // Notify other peer
+                updatedPeers.forEach(peerId => {
+                    io.to(peerId).emit('p2p:peer-left');
+                });
+            }
+            socket.leave(`p2p_${roomId}`);
+            socket.data.p2pRoom = null;
+        }
+    });
+
+    socket.on('webrtc:offer', (data) => {
+        // data: { offer } -> relay to room's other peer
+        const roomId = socket.data.p2pRoom;
+        if (roomId) {
+            socket.to(`p2p_${roomId}`).emit('webrtc:offer', {
+                srcSocketId: socket.id,
+                offer: data.offer
+            });
+        }
+    });
+
+    socket.on('webrtc:answer', (data) => {
+        const roomId = socket.data.p2pRoom;
+        if (roomId) {
+            socket.to(`p2p_${roomId}`).emit('webrtc:answer', {
+                srcSocketId: socket.id,
+                answer: data.answer
+            });
+        }
+    });
+
+    socket.on('webrtc:ice-candidate', (data) => {
+        const roomId = socket.data.p2pRoom;
+        if (roomId) {
+            socket.to(`p2p_${roomId}`).emit('webrtc:ice-candidate', {
+                srcSocketId: socket.id,
+                candidate: data.candidate
+            });
+        }
+    });
+
     socket.on('disconnect', async () => {
+        // P2P Cleanup
+        const p2pRoomId = socket.data.p2pRoom;
+        if (p2pRoomId && p2pRooms.has(p2pRoomId)) {
+            const peers = p2pRooms.get(p2pRoomId);
+            const updatedPeers = peers.filter(id => id !== socket.id);
+
+            if (updatedPeers.length === 0) {
+                p2pRooms.delete(p2pRoomId);
+            } else {
+                p2pRooms.set(p2pRoomId, updatedPeers);
+                updatedPeers.forEach(peerId => {
+                    io.to(peerId).emit('p2p:peer-left');
+                });
+            }
+        }
+
         const currentRoom = socket.data.currentRoom;
         const dId = socket.data.deviceId;
         if (currentRoom && dId && roomPresence.has(currentRoom)) {

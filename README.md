@@ -8,7 +8,8 @@ Matchingo is a modern, light-themed web application that allows users on the sam
 To run this project locally or in production, you need:
 - **Node.js**: v18.x or higher
 - **npm**: v9.x or higher
-- **Redis**: v6.x or higher (Required for Room state management and Socket.IO scaling)
+- **MongoDB**: Required for persistent storage.
+- **Redis**: (Not currently used for presence - Logic is In-Memory)
 - **Docker** (Optional): For containerized deployment
 
 ---
@@ -66,9 +67,9 @@ VITE_API_URL=http://localhost:3000
 ## 🏗 Architecture
 
 ### Technical Highlights
-- **State-Aware Redis**: Built on a resilient singleton pattern that gates all operations behind connection health checks. Supports Upstash TLS out of the box.
-- **Unique Presence**: Uses Redis Sets to track unique `deviceId`s. Opening 10 tabs in the same browser will correctly show as only 1 online user.
-- **Graceful Degradation**: Automatically falls back to in-memory Maps and single-instance mode if Redis goes offline.
+- **In-Memory Presence**: Uses efficient `Map`s for tracking active rooms and connected devices (Single Instance).
+- **Unique Presence**: Uses In-Memory Sets to track unique `deviceId`s. Opening 10 tabs in the same browser will correctly show as only 1 online user.
+- **Resilient Storage**: MongoDB is used for persistent storage of Room metadata and Shared Text.
 
 ### Room Logic
 - **IP Detection**: detects client's IP address.
@@ -95,7 +96,7 @@ matchingo/
 - [x] IP-based automatic room joining
 - [x] Real-time text & file sharing
 - [x] Unique Device Tracking (1 user = 1 device)
-- [x] Production-ready with "State-Aware" Redis Singleton
+- [x] Production-ready Single Instance (In-Memory Architecture)
 - [x] Docker & CI/CD support
 - [x] Render-ready with ephemeral disk persistence strategy
 - [x] Mobile-responsive minimalist UI
