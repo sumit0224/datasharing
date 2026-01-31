@@ -19,7 +19,7 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, onDeleteText, isC
     return (
         <div className="bg-[#0A0A0A] rounded-2xl shadow-2xl border border-white/5 overflow-hidden fade-in">
             {/* Header with icon */}
-            <div className="p-6 border-b border-white/5">
+            <div className="p-4 md:p-6 border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#20B2AA] rounded-xl flex items-center justify-center text-black shadow-[0_0_15px_-3px_rgba(32,178,170,0.4)]" aria-hidden="true">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -31,7 +31,7 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, onDeleteText, isC
             </div>
 
             {/* Input Form */}
-            <div className="p-6 border-b border-white/5 relative">
+            <div className="p-4 md:p-6 border-b border-white/5 relative">
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <textarea
                         value={currentText}
@@ -49,7 +49,7 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, onDeleteText, isC
                         <button
                             type="submit"
                             disabled={!currentText.trim() || !isConnected}
-                            className="px-8 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-bold hover:bg-[#20B2AA] hover:text-black hover:border-[#20B2AA] transition-all disabled:opacity-30 disabled:cursor-not-allowed duration-300"
+                            className="px-6 md:px-8 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-bold hover:bg-[#20B2AA] hover:text-black hover:border-[#20B2AA] transition-all disabled:opacity-30 disabled:cursor-not-allowed duration-300"
                             aria-label="Save text message"
                         >
                             Send
@@ -59,7 +59,7 @@ const TextShare = React.memo(({ texts, onSendText, onCopyText, onDeleteText, isC
             </div>
 
             {/* Shared Texts List */}
-            <div className="p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
+            <div className="p-4 md:p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
                 {texts.length > 0 ? (
                     <div className="space-y-4" role="list" aria-label="Shared text messages">
                         {texts.slice().reverse().map((text) => (

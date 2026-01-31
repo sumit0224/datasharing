@@ -56,7 +56,7 @@ const FileShare = React.memo(({ files, onUpload, onDeleteFile, isUploading, uplo
     return (
         <div className="bg-[#0A0A0A] rounded-2xl shadow-2xl border border-white/5 overflow-hidden fade-in">
             {/* Header with icon */}
-            <div className="p-6 border-b border-white/5">
+            <div className="p-4 md:p-6 border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#20B2AA] rounded-xl flex items-center justify-center text-black shadow-[0_0_15px_-3px_rgba(32,178,170,0.4)]" aria-hidden="true">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -68,10 +68,10 @@ const FileShare = React.memo(({ files, onUpload, onDeleteFile, isUploading, uplo
             </div>
 
             {/* Upload Zone */}
-            <div className="p-6 border-b border-white/5">
+            <div className="p-4 md:p-6 border-b border-white/5">
                 <div
                     {...getRootProps()}
-                    className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-300
+                    className={`border-2 border-dashed rounded-xl p-8 md:p-12 text-center cursor-pointer transition-all duration-300
                         ${!isConnected || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
                         ${isDragActive
                             ? 'border-[#20B2AA] bg-[#20B2AA]/10 scale-[1.02] shadow-[0_0_20px_-5px_rgba(32,178,170,0.3)]'
@@ -115,7 +115,7 @@ const FileShare = React.memo(({ files, onUpload, onDeleteFile, isUploading, uplo
             </div>
 
             {/* Files List */}
-            <div className="p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
+            <div className="p-4 md:p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
                 {files.length > 0 ? (
                     <div className="space-y-4" role="list" aria-label="Shared files">
                         {files.slice().reverse().map((file) => (

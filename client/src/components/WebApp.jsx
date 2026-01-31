@@ -371,7 +371,7 @@ function WebApp() {
             <div className="min-h-screen bg-black text-white selection:bg-[#20B2AA]/30">
                 <ToastContainer {...toastOptions} theme="dark" />
 
-                <header className="bg-black/80 border-b border-white/5 py-4 px-6 sticky top-0 z-50 backdrop-blur-xl">
+                <header className="bg-black/80 border-b border-white/5 py-3 md:py-4 px-4 md:px-6 sticky top-0 z-50 backdrop-blur-xl">
                     <div className="max-w-7xl mx-auto flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Logo className="w-8 h-8 md:w-10 md:h-10 text-white" />
@@ -538,7 +538,7 @@ function WebApp() {
                     )}
                 </header>
 
-                <div className="bg-black border-b border-white/5 py-4 px-6 relative overflow-hidden">
+                <div className="bg-black border-b border-white/5 py-3 md:py-4 px-4 md:px-6 relative overflow-hidden">
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-[#20B2AA]/5 rounded-full blur-[100px] pointer-events-none" />
                     <div className="max-w-7xl mx-auto relative z-10">
                         <RoomInfo
@@ -551,7 +551,7 @@ function WebApp() {
                     </div>
                 </div>
 
-                <main className="max-w-4xl mx-auto px-4 py-12 relative z-10">
+                <main className="max-w-4xl mx-auto px-4 py-6 md:py-12 relative z-10">
                     <div className="flex gap-4 mb-8 p-1 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm" role="tablist" aria-label="Content tabs">
                         <button
                             role="tab"
@@ -611,13 +611,13 @@ function WebApp() {
 
 
                 <footer className="py-8 border-t border-white/5 mt-auto bg-black/40 backdrop-blur-xl">
-                    <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-center md:text-left">
+                    <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-center md:text-left">
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
                                 <Logo className="w-5 h-5 opacity-50" />
-                                
+
                             </div>
-                            
+
                         </div>
                         <div className="flex gap-6 text-gray-500">
                             <Link to="/privacy" className="hover:text-[#20B2AA] transition-colors">Privacy Policy</Link>

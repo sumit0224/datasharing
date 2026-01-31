@@ -88,7 +88,7 @@ const LandingPage = () => {
             </nav>
 
             {/* Hero Section */}
-            <section className="pt-32 pb-20 md:pt-48 md:pb-32 relative">
+            <section className="pt-24 pb-12 md:pt-48 md:pb-32 relative">
                 <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center relative z-10">
                     <div className="text-left">
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#20B2AA]/10 text-[#20B2AA] text-xs font-bold mb-8 border border-[#20B2AA]/20 tracking-wide uppercase">
@@ -96,7 +96,7 @@ const LandingPage = () => {
                             Local P2P Sharing
                         </div>
 
-                        <h1 className="text-5xl md:text-7xl font-bold tracking-wider text-white mb-6 leading-[1.1] font-orbitron">
+                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-wider text-white mb-6 leading-[1.1] font-orbitron">
                             Share freely. <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-200 drop-shadow-[0_0_15px_rgba(32,178,170,0.5)]">
                                 No Internet needed.
@@ -127,7 +127,7 @@ const LandingPage = () => {
                     </div>
 
                     {/* Right Side: 3D Canvas Container */}
-                    <div className="relative h-[350px] lg:h-[600px] w-full block">
+                    <div className="relative h-[300px] md:h-[350px] lg:h-[600px] w-full block">
                         <div className="absolute inset-0 pointer-events-none">
                             <HeroCanvas />
                         </div>
@@ -140,19 +140,19 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
                         <div className="text-center">
-                            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
+                            <div className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
                                 {(stats.totalUsers + 100).toLocaleString()}+
                             </div>
                             <div className="text-gray-400 text-sm uppercase tracking-wider">Total Users</div>
                         </div>
                         <div className="text-center">
-                            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
+                            <div className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
                                 {stats.activeConnections}
                             </div>
                             <div className="text-gray-400 text-sm uppercase tracking-wider">Active Now</div>
                         </div>
                         <div className="text-center col-span-2 md:col-span-1">
-                            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
+                            <div className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
                                 100%
                             </div>
                             <div className="text-gray-400 text-sm uppercase tracking-wider">Private</div>
