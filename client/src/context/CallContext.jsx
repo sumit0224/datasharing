@@ -75,7 +75,8 @@ export const CallProvider = ({ socket, children }) => {
             if (callSocketService.current) {
                 callSocketService.current.detachListeners();
             }
-            cleanup();
+            // Use immediate reset on unmount to avoid ghost "disconnected" UI
+            resetToIdle();
         };
     }, [socket]);
 
@@ -251,16 +252,39 @@ export const CallProvider = ({ socket, children }) => {
 
     // --- HELPERS ---
 
-    const startCallTimer = () => {
-        clearInterval(callTimer.current);
+    const startCallTimer = useCallback(() => {
+        if (callTimer.current) clearInterval(callTimer.current);
         setCallDuration(0);
 
         callTimer.current = setInterval(() => {
             setCallDuration(prev => prev + 1);
         }, 1000);
-    };
+    }, []);
 
-    const cleanup = () => {
+    const resetToIdle = useCallback(() => {
+        console.log('🔄 Resetting call state to idle');
+        if (callTimer.current) {
+            clearInterval(callTimer.current);
+            callTimer.current = null;
+        }
+        if (webrtcService.current) {
+            webrtcService.current.cleanup();
+        }
+        setCallState('idle');
+        setCaller(null);
+        setRecipient(null);
+        setLocalStream(null);
+        setRemoteStream(null);
+        setIsMuted(false);
+        setIsVideoOff(false);
+        setCallDuration(0);
+        setError(null);
+        setIsInitiator(false);
+        setDisconnectReason(null);
+        currentPeerId.current = null;
+    }, []);
+
+    const cleanup = useCallback(() => {
         console.log('🧹 Cleaning up call state...');
 
         // Stop timer
@@ -274,26 +298,19 @@ export const CallProvider = ({ socket, children }) => {
             webrtcService.current.cleanup();
         }
 
-        // Show disconnect state briefly before going to idle
-        setCallState('disconnected');
+        // Only show "disconnected" UI if we were actually in a call
+        setCallState(prev => {
+            if (prev === 'idle' || prev === 'disconnected') return 'idle';
 
-        // Transition to idle after 2 seconds
-        setTimeout(() => {
-            setCallState('idle');
-            setCaller(null);
-            setRecipient(null);
-            setLocalStream(null);
-            setRemoteStream(null);
-            setIsMuted(false);
-            setIsVideoOff(false);
-            setCallDuration(0);
-            setError(null);
-            setIsInitiator(false);
-            setDisconnectReason(null);
-            currentPeerId.current = null;
-            console.log('✅ Cleanup complete');
-        }, 2000);
-    };
+            // If we were in a call state, show disconnected briefly
+            setTimeout(() => {
+                resetToIdle();
+                console.log('✅ Cleanup complete (delayed)');
+            }, 2000);
+
+            return 'disconnected';
+        });
+    }, [resetToIdle]);
 
     const value = {
         // State

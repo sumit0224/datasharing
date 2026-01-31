@@ -450,21 +450,61 @@ function WebApp() {
                         </button>
                     </div>
 
+                    {/* Mobile Menu Backdrop */}
                     {showMobileMenu && (
-                        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0A0A0A] border-b border-white/5 shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200">
+                        <div
+                            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+                            onClick={() => setShowMobileMenu(false)}
+                        />
+                    )}
+
+                    {showMobileMenu && (
+                        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0F1629] border-b border-white/10 shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200 overflow-hidden">
                             <div className="flex flex-col p-4 space-y-3">
                                 <button
                                     onClick={() => { setShowJoinModal(true); setShowMobileMenu(false); }}
-                                    className="w-full text-left px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-medium text-gray-200 transition"
+                                    className="w-full text-left px-5 py-4 bg-white/5 hover:bg-white/10 rounded-2xl font-medium text-gray-200 transition flex items-center justify-between group"
                                 >
-                                    Join Room
+                                    <span>Join Room</span>
+                                    <svg className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
                                 </button>
                                 <button
                                     onClick={() => { setShowCreateModal(true); setShowMobileMenu(false); }}
-                                    className="w-full text-left px-4 py-3 bg-[#20B2AA] text-black hover:bg-[#1C9D96] rounded-xl font-bold transition shadow-lg"
+                                    className="w-full text-left px-5 py-4 bg-[#20B2AA]/10 text-[#20B2AA] hover:bg-[#20B2AA]/20 rounded-2xl font-bold transition flex items-center justify-between group border border-[#20B2AA]/20"
                                 >
-                                    + New Room
+                                    <span>+ New Room</span>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
                                 </button>
+
+                                {/* Video Call in Mobile Menu */}
+                                <div className="pt-2">
+                                    <div className="px-5 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Users ({users.length - 1})</div>
+                                    <div className="space-y-2 mt-1">
+                                        {users.filter(user => user.id !== deviceId).length > 0 ? (
+                                            users
+                                                .filter(user => user.id !== deviceId)
+                                                .map(user => (
+                                                    <div key={user.id} className="px-5 py-3 bg-white/5 rounded-2xl flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#20B2AA] to-[#1C9D96] flex items-center justify-center text-white text-sm font-bold">
+                                                                {user.name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <span className="text-white text-sm font-medium">{user.name}</span>
+                                                        </div>
+                                                        <CallButton userId={user.id} userName={user.name} className="text-xs px-3 py-1.5" />
+                                                    </div>
+                                                ))
+                                        ) : (
+                                            <div className="px-5 py-4 text-gray-500 text-xs text-center bg-white/5 rounded-2xl border border-dashed border-white/5">
+                                                No one online to call
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

@@ -116,7 +116,38 @@ body {
     animation: slideDown 0.3s ease-out;
 }
 
-/* Transitions */
 .transition-smooth {
     transition: all 0.2s ease-in-out;
+}
+
+/* Glassmorphism Utility */
+.glass-morphism {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Improvements */
+@media (max-width: 640px) {
+    .custom-padding {
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+    }
+    
+    button:not(.no-touch), a:not(.no-touch) {
+        min-height: 44px;
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-stack {
+        flex-direction: column !important;
+    }
+}
+
+.animate-in {
+    animation-fill-mode: forwards;
 }
