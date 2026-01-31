@@ -25,7 +25,7 @@ const RoomInfo = React.memo(({ roomId, userCount, onCopyRoom, onCloseRoom, isPri
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-gray-400 uppercase text-xs font-bold tracking-wider">Online:</span>
-                    <span className="font-bold text-[#20B2AA] bg-[#20B2AA]/10 px-2 py-0.5 rounded-md border border-[#20B2AA]/20" aria-label={`${userCount} users online`}>
+                    <span className="font-bold text-[#20B2AA] bg-[#20B2AA]/10 px-3 py-1 rounded-md border border-[#20B2AA]/20" aria-label={`${userCount} users online`}>
                         {userCount}
                     </span>
                 </div>

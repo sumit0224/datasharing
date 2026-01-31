@@ -503,6 +503,8 @@ io.on('connection', (socket) => {
 
         const userCount = getRoomUserCount(roomId);
         const users = getRoomUsers(roomId);
+
+        // Broadcast updated user count to ALL clients in the room (including the new one)
         await broadcastRoomUpdate(roomId, 'user_count', userCount);
 
         try {
@@ -515,6 +517,11 @@ io.on('connection', (socket) => {
                 userCount,
                 users
             });
+
+            // Send an additional immediate user count update to ensure sync
+            setTimeout(() => {
+                broadcastRoomUpdate(roomId, 'user_count', getRoomUserCount(roomId));
+            }, 100);
         } catch (err) {
             logger.error('Error sending room state:', err);
         }
@@ -832,7 +839,15 @@ io.on('connection', (socket) => {
             if (roomData.size === 0) roomPresence.delete(currentRoom);
 
             const userCount = getRoomUserCount(currentRoom);
+            logger.info(`👋 Device ${dId.substring(0, 8)} left room ${currentRoom}. New count: ${userCount}`);
+
+            // Immediate broadcast
             await broadcastRoomUpdate(currentRoom, 'user_count', userCount);
+
+            // Additional delayed broadcast to ensure all clients receive the update
+            setTimeout(() => {
+                broadcastRoomUpdate(currentRoom, 'user_count', getRoomUserCount(currentRoom));
+            }, 100);
         }
     });
 });
@@ -879,6 +894,19 @@ setInterval(async () => {
         logger.error('Error in file cleanup:', err);
     }
 }, 30000); // Run every 30 seconds
+
+// --- USER COUNT SYNC ---
+// Periodic sync to ensure all clients have accurate user counts
+setInterval(() => {
+    try {
+        for (const [roomId, deviceMap] of roomPresence.entries()) {
+            const userCount = deviceMap.size;
+            io.to(roomId).emit('user_count', userCount);
+        }
+    } catch (err) {
+        logger.error('Error in user count sync:', err);
+    }
+}, 5000); // Sync every 5 seconds
 
 // --- SERVER START ---
 (async () => {

@@ -141,7 +141,7 @@ const LandingPage = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
                         <div className="text-center">
                             <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
-                                {stats.totalUsers.toLocaleString()}+
+                                {(stats.totalUsers + 100).toLocaleString()}+
                             </div>
                             <div className="text-gray-400 text-sm uppercase tracking-wider">Total Users</div>
                         </div>

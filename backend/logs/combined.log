@@ -1138,3 +1138,46 @@
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:54:16.233Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:55:15.480Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:55:22.557Z"}
+{"level":"info","message":"🚀 Server running on port 3000","timestamp":"2026-01-31T12:10:34.228Z"}
+{"level":"info","message":"🌍 Environment: development","timestamp":"2026-01-31T12:10:34.229Z"}
+{"level":"info","message":"💾 Database: MongoDB","timestamp":"2026-01-31T12:10:34.230Z"}
+{"level":"info","message":"🗄️ Storage: Cloudflare R2","timestamp":"2026-01-31T12:10:34.230Z"}
+{"level":"info","message":"🧠 Real-Time: In-Memory Adapter","timestamp":"2026-01-31T12:10:34.230Z"}
+{"level":"info","message":"⏱️ Text Expiry: 10 Minutes | File Expiry: 2 Minutes","timestamp":"2026-01-31T12:10:34.230Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-31T12:10:34.703Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:10:46.255Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:11:35.387Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 1","timestamp":"2026-01-31T12:11:52.996Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:14:39.367Z"}
+{"level":"info","message":"Call request: dev_6a6lh2goxml23glh9 → dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T12:14:42.393Z"}
+{"level":"info","message":"Call auto-ended due to disconnect: dev_6a6lh2goxml23glh9","timestamp":"2026-01-31T12:14:48.019Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 1","timestamp":"2026-01-31T12:14:48.020Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:14:48.376Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:14:49.767Z"}
+{"level":"info","message":"Call request: dev_6a6lh2goxml23glh9 → dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T12:14:51.171Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:15:08.048Z"}
+{"level":"info","message":"Call request: dev_damdpvu4mml29ypyk → dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T12:15:12.760Z"}
+{"level":"info","message":"Call rejected: dev_a01xwc3a4mkzoblt8 rejected dev_damdpvu4mml29ypyk","timestamp":"2026-01-31T12:15:16.780Z"}
+{"level":"info","message":"Call rejected: dev_a01xwc3a4mkzoblt8 rejected dev_damdpvu4mml29ypyk","timestamp":"2026-01-31T12:15:16.784Z"}
+{"level":"info","message":"Call auto-ended due to disconnect: dev_6a6lh2goxml23glh9","timestamp":"2026-01-31T12:15:19.861Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 2","timestamp":"2026-01-31T12:15:19.861Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:15:20.238Z"}
+{"level":"info","message":"Call request: dev_6a6lh2goxml23glh9 → dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T12:15:22.654Z"}
+{"level":"info","message":"Call rejected: dev_a01xwc3a4mkzoblt8 rejected dev_6a6lh2goxml23glh9","timestamp":"2026-01-31T12:15:23.678Z"}
+{"level":"info","message":"Call rejected: dev_a01xwc3a4mkzoblt8 rejected dev_6a6lh2goxml23glh9","timestamp":"2026-01-31T12:15:23.681Z"}
+{"level":"info","message":"Call auto-ended due to disconnect: dev_6a6lh2goxml23glh9","timestamp":"2026-01-31T12:16:10.765Z"}
+{"level":"info","message":"👋 Device dev_6a6l left room local-room. New count: 2","timestamp":"2026-01-31T12:16:10.766Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:16:11.146Z"}
+{"level":"info","message":"Call request: dev_6a6lh2goxml23glh9 → dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T12:16:14.127Z"}
+{"level":"info","message":"Call rejected: dev_a01xwc3a4mkzoblt8 rejected dev_6a6lh2goxml23glh9","timestamp":"2026-01-31T12:16:15.145Z"}
+{"level":"info","message":"Call rejected: dev_a01xwc3a4mkzoblt8 rejected dev_6a6lh2goxml23glh9","timestamp":"2026-01-31T12:16:15.146Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:20:24.125Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 3","timestamp":"2026-01-31T12:21:53.035Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:21:53.387Z"}
+{"level":"info","message":"Call request: dev_a01xwc3a4mkzoblt8 → dev_damdpvu4mml29ypyk","timestamp":"2026-01-31T12:21:55.761Z"}
+{"level":"info","message":"Call auto-ended due to disconnect: dev_a01xwc3a4mkzoblt8","timestamp":"2026-01-31T12:22:06.635Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 3","timestamp":"2026-01-31T12:22:06.635Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:22:06.978Z"}
+{"level":"info","message":"👋 Device dev_a01x left room local-room. New count: 3","timestamp":"2026-01-31T12:22:07.274Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T12:22:08.449Z"}
+{"level":"info","message":"Call request: dev_a01xwc3a4mkzoblt8 → dev_damdpvu4mml29ypyk","timestamp":"2026-01-31T12:22:12.627Z"}
