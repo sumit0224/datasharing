@@ -37,6 +37,6 @@
     "sass-embedded": "^1.97.3",
     "tailwindcss": "^4.1.18",
     "vite": "^7.2.4",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^0.19.8"
   }
 }
