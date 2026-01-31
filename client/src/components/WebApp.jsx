@@ -507,6 +507,18 @@ function WebApp() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                     </svg>
                                 </button>
+                                <button
+                                    onClick={() => { setShowRandomChat(true); setShowMobileMenu(false); }}
+                                    className="w-full text-left px-5 py-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-purple-200 hover:from-purple-500/20 hover:to-indigo-500/20 rounded-2xl font-bold transition flex items-center justify-between group border border-purple-500/20"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">🌍</span>
+                                        <span>Random Video Chat</span>
+                                    </div>
+                                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </button>
 
                                 {/* Video Call in Mobile Menu */}
                                 <div className="pt-2">
