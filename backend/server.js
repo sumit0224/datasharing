@@ -47,6 +47,7 @@ mongoose.connect(MONGO_URI)
 
 const Room = require('./models/Room');
 const SharedText = require('./models/SharedText');
+const UserStats = require('./models/UserStats');
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = /jpeg|jpg|png|gif|pdf|doc|docx|txt|zip|rar|mp3|mp4|mov|avi|ppt|pptx|xls|xlsx|csv|json|xml|html|css|js/;
@@ -97,6 +98,17 @@ function getRoomUserCount(roomId) {
     return devices ? devices.size : 0;
 }
 
+function getRoomUsers(roomId) {
+    const devices = roomPresence.get(roomId);
+    if (!devices) return [];
+
+    return Array.from(devices.keys()).map(deviceId => ({
+        id: deviceId,
+        name: `Guest-${deviceId.slice(-4)}`
+    }));
+}
+
+
 function generateRoomId(ip) {
     if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.includes('::ffff:127.0.0.1')) {
         return 'local-room';
@@ -109,6 +121,22 @@ function generateRoomId(ip) {
         return `room-${parts[0]}-${parts[1]}-${parts[2]}`;
     }
     return `room-${ip.replace(/[:.]/g, '-').substring(0, 20)}`;
+}
+
+async function trackUser(deviceId) {
+    try {
+        await UserStats.findOneAndUpdate(
+            { deviceId },
+            {
+                $set: { lastSeen: new Date() },
+                $inc: { totalSessions: 1 },
+                $setOnInsert: { firstSeen: new Date() }
+            },
+            { upsert: true, new: true }
+        );
+    } catch (err) {
+        logger.error('Error tracking user:', err);
+    }
 }
 
 async function broadcastRoomUpdate(roomId, eventName, payload) {
@@ -177,11 +205,13 @@ app.get('/api/room-info', apiLimiter, async (req, res) => {
         const roomId = generateRoomId(clientIp);
         const room = await getRoom(roomId);
         const userCount = getRoomUserCount(roomId);
+        const users = getRoomUsers(roomId);
 
         res.json({
             roomId,
             clientIp,
             userCount,
+            users,
             texts: room.texts,
             files: room.files
         });
@@ -196,15 +226,36 @@ app.get('/api/room/:roomId', apiLimiter, async (req, res) => {
         const { roomId } = req.params;
         const room = await getRoom(roomId);
         const userCount = getRoomUserCount(roomId);
+        const users = getRoomUsers(roomId);
 
         res.json({
             roomId,
             userCount,
+            users,
             texts: room.texts,
             files: room.files
         });
     } catch (err) {
         logger.error('Error in /api/room/:roomId:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get Platform Statistics
+app.get('/api/stats', apiLimiter, async (req, res) => {
+    try {
+        const totalUsers = await UserStats.countDocuments();
+        const activeUsers = roomPresence.size; // Currently online rooms
+        const totalActiveConnections = Array.from(roomPresence.values())
+            .reduce((sum, deviceMap) => sum + deviceMap.size, 0);
+
+        res.json({
+            totalUsers,
+            activeRooms: activeUsers,
+            activeConnections: totalActiveConnections
+        });
+    } catch (err) {
+        logger.error('Error in /api/stats:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -440,6 +491,10 @@ io.on('connection', (socket) => {
         socket.data.deviceId = deviceId || `legacy_${socket.id.substring(0, 8)}`;
         socket.data.guestId = guestId || socket.data.deviceId.substring(0, 8);
 
+        // Track user for analytics
+        await trackUser(socket.data.deviceId);
+
+
         if (!roomPresence.has(roomId)) roomPresence.set(roomId, new Map());
         const roomData = roomPresence.get(roomId);
         const dId = socket.data.deviceId;
@@ -447,6 +502,7 @@ io.on('connection', (socket) => {
         roomData.get(dId).add(socket.id);
 
         const userCount = getRoomUserCount(roomId);
+        const users = getRoomUsers(roomId);
         await broadcastRoomUpdate(roomId, 'user_count', userCount);
 
         try {
@@ -456,7 +512,8 @@ io.on('connection', (socket) => {
                 isPrivate: false,
                 texts: room.texts,
                 files: room.files,
-                userCount
+                userCount,
+                users
             });
         } catch (err) {
             logger.error('Error sending room state:', err);
@@ -553,114 +610,217 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- WEBRTC P2P SIGNALING (Room-Based) ---
-    const p2pRooms = new Map(); // roomId -> [socket.id]
 
-    socket.on('p2p:join', (roomId) => {
-        if (!roomId) return;
+    // --- VIDEO CALL SIGNALING ---
+    // Track active calls: userId -> { inCall: bool, partnerId: string, socketId: string }
+    const userCallState = new Map();
 
-        // Ensure strictly separate from main rooms
-        let roomPeers = p2pRooms.get(roomId) || [];
-
-        if (roomPeers.length >= 2) {
-            socket.emit('p2p:error', 'Room is full (Max 2 peers).');
-            return;
+    // Helper: Get user's call state
+    function getUserCallState(socketId) {
+        for (const [userId, state] of userCallState.entries()) {
+            if (state.socketId === socketId) return { userId, ...state };
         }
+        return null;
+    }
 
-        // Add user
-        if (!roomPeers.includes(socket.id)) {
-            roomPeers.push(socket.id);
-            p2pRooms.set(roomId, roomPeers);
-            socket.join(`p2p_${roomId}`); // Private channel for this P2P session
-            socket.data.p2pRoom = roomId;
-
-            logger.info(`socket ${socket.id} joined P2P room ${roomId}. Count: ${roomPeers.length}`);
-            console.log(`[P2P] Join: ${roomId}, Peers: ${JSON.stringify(roomPeers)}`);
-
-            if (roomPeers.length === 1) {
-                socket.emit('p2p:waiting', 'Waiting for peer to join...');
-            } else if (roomPeers.length === 2) {
-                // Room Ready!
-                const peer1 = roomPeers[0];
-                const peer2 = roomPeers[1];
-                console.log(`[P2P] Room ${roomId} READY. Peers: ${peer1}, ${peer2}`);
-
-                io.to(peer1).emit('p2p:ready', { isInitiator: true, peerId: peer2 });
-                io.to(peer2).emit('p2p:ready', { isInitiator: false, peerId: peer1 });
+    // Helper: Clear user call state
+    function clearUserCallState(socketId) {
+        for (const [userId, state] of userCallState.entries()) {
+            if (state.socketId === socketId) {
+                userCallState.delete(userId);
+                return userId;
             }
-        } else {
-            console.log(`[P2P] Socket ${socket.id} already in room ${roomId}`);
+        }
+    }
+
+    // Call Request: User A wants to call User B
+    socket.on('call:request', ({ recipientId }) => {
+        const callerId = socket.data.deviceId || socket.id;
+
+        // Validation
+        if (!recipientId) {
+            return socket.emit('call:error', { reason: 'invalid_recipient' });
+        }
+
+        // Check if recipient is online
+        const recipientSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.data.deviceId || s.id) === recipientId);
+
+        if (!recipientSocket) {
+            return socket.emit('call:error', { reason: 'user_offline' });
+        }
+
+        // Check if recipient is already in a call
+        if (userCallState.has(recipientId)) {
+            return socket.emit('call:error', { reason: 'user_busy' });
+        }
+
+        // Check if caller is already in a call
+        if (userCallState.has(callerId)) {
+            return socket.emit('call:error', { reason: 'already_in_call' });
+        }
+
+        // Mark both users as "in call" (pending)
+        userCallState.set(callerId, {
+            inCall: false,
+            partnerId: recipientId,
+            socketId: socket.id,
+            status: 'calling'
+        });
+        userCallState.set(recipientId, {
+            inCall: false,
+            partnerId: callerId,
+            socketId: recipientSocket.id,
+            status: 'ringing'
+        });
+
+        // Notify recipient of incoming call
+        recipientSocket.emit('call:incoming', {
+            callerId,
+            callerName: socket.data.guestId || callerId
+        });
+
+        logger.info(`Call request: ${callerId} → ${recipientId}`);
+    });
+
+    // Call Accepted: User B accepts the call
+    socket.on('call:accepted', ({ callerId }) => {
+        const recipientId = socket.data.deviceId || socket.id;
+
+        // Find caller's socket
+        const callerSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.data.deviceId || s.id) === callerId);
+
+        if (!callerSocket) {
+            clearUserCallState(socket.id);
+            return socket.emit('call:error', { reason: 'caller_offline' });
+        }
+
+        // Update call states to active
+        if (userCallState.has(callerId)) {
+            userCallState.get(callerId).inCall = true;
+            userCallState.get(callerId).status = 'active';
+        }
+        if (userCallState.has(recipientId)) {
+            userCallState.get(recipientId).inCall = true;
+            userCallState.get(recipientId).status = 'active';
+        }
+
+        // Notify both users to start WebRTC connection
+        callerSocket.emit('call:accepted', {
+            recipientId,
+            isInitiator: true // Caller creates offer
+        });
+        socket.emit('call:accepted', {
+            callerId,
+            isInitiator: false // Recipient waits for offer
+        });
+
+        logger.info(`Call accepted: ${callerId} ↔ ${recipientId}`);
+    });
+
+    // Call Rejected: User B rejects the call
+    socket.on('call:rejected', ({ callerId }) => {
+        const recipientId = socket.data.deviceId || socket.id;
+
+        // Find caller's socket
+        const callerSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.data.deviceId || s.id) === callerId);
+
+        // Cleanup call states
+        userCallState.delete(callerId);
+        userCallState.delete(recipientId);
+
+        // Notify caller
+        if (callerSocket) {
+            callerSocket.emit('call:rejected', { recipientId });
+        }
+
+        logger.info(`Call rejected: ${recipientId} rejected ${callerId}`);
+    });
+
+    // Call Ended: Either user ends the call
+    socket.on('call:ended', ({ peerId }) => {
+        const userId = socket.data.deviceId || socket.id;
+
+        // Find peer's socket
+        const peerSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.data.deviceId || s.id) === peerId);
+
+        // Cleanup call states
+        userCallState.delete(userId);
+        userCallState.delete(peerId);
+
+        // Notify peer
+        if (peerSocket) {
+            peerSocket.emit('call:ended', { peerId: userId });
+        }
+
+        logger.info(`Call ended: ${userId} ↔ ${peerId}`);
+    });
+
+    // --- WEBRTC SIGNALING RELAY ---
+
+    // Relay SDP Offer
+    socket.on('webrtc:offer', ({ recipientId, offer }) => {
+        const recipientSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.data.deviceId || s.id) === recipientId);
+
+        if (recipientSocket) {
+            const senderId = socket.data.deviceId || socket.id;
+            recipientSocket.emit('webrtc:offer', { senderId, offer });
         }
     });
 
-    socket.on('p2p:leave', () => {
-        const roomId = socket.data.p2pRoom;
-        if (roomId && p2pRooms.has(roomId)) {
-            const peers = p2pRooms.get(roomId);
-            const updatedPeers = peers.filter(id => id !== socket.id);
+    // Relay SDP Answer
+    socket.on('webrtc:answer', ({ recipientId, answer }) => {
+        const recipientSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.data.deviceId || s.id) === recipientId);
 
-            if (updatedPeers.length === 0) {
-                p2pRooms.delete(roomId);
-            } else {
-                p2pRooms.set(roomId, updatedPeers);
-                // Notify other peer
-                updatedPeers.forEach(peerId => {
-                    io.to(peerId).emit('p2p:peer-left');
-                });
-            }
-            socket.leave(`p2p_${roomId}`);
-            socket.data.p2pRoom = null;
+        if (recipientSocket) {
+            const senderId = socket.data.deviceId || socket.id;
+            recipientSocket.emit('webrtc:answer', { senderId, answer });
         }
     });
 
-    socket.on('webrtc:offer', (data) => {
-        // data: { offer } -> relay to room's other peer
-        const roomId = socket.data.p2pRoom;
-        if (roomId) {
-            socket.to(`p2p_${roomId}`).emit('webrtc:offer', {
-                srcSocketId: socket.id,
-                offer: data.offer
-            });
+    // Relay ICE Candidate
+    socket.on('webrtc:ice-candidate', ({ recipientId, candidate }) => {
+        const recipientSocket = Array.from(io.sockets.sockets.values())
+            .find(s => (s.data.deviceId || s.id) === recipientId);
+
+        if (recipientSocket) {
+            const senderId = socket.data.deviceId || socket.id;
+            recipientSocket.emit('webrtc:ice-candidate', { senderId, candidate });
         }
     });
 
-    socket.on('webrtc:answer', (data) => {
-        const roomId = socket.data.p2pRoom;
-        if (roomId) {
-            socket.to(`p2p_${roomId}`).emit('webrtc:answer', {
-                srcSocketId: socket.id,
-                answer: data.answer
-            });
-        }
-    });
-
-    socket.on('webrtc:ice-candidate', (data) => {
-        const roomId = socket.data.p2pRoom;
-        if (roomId) {
-            socket.to(`p2p_${roomId}`).emit('webrtc:ice-candidate', {
-                srcSocketId: socket.id,
-                candidate: data.candidate
-            });
-        }
-    });
+    // --- END OF SOCKET HANDLERS ---
 
     socket.on('disconnect', async () => {
-        // P2P Cleanup
-        const p2pRoomId = socket.data.p2pRoom;
-        if (p2pRoomId && p2pRooms.has(p2pRoomId)) {
-            const peers = p2pRooms.get(p2pRoomId);
-            const updatedPeers = peers.filter(id => id !== socket.id);
+        // Video Call Cleanup
+        const userId = socket.data.deviceId || socket.id;
+        const callState = userCallState.get(userId);
 
-            if (updatedPeers.length === 0) {
-                p2pRooms.delete(p2pRoomId);
-            } else {
-                p2pRooms.set(p2pRoomId, updatedPeers);
-                updatedPeers.forEach(peerId => {
-                    io.to(peerId).emit('p2p:peer-left');
+        if (callState && callState.partnerId) {
+            // Notify partner that call ended due to disconnect
+            const partnerSocket = Array.from(io.sockets.sockets.values())
+                .find(s => (s.data.deviceId || s.id) === callState.partnerId);
+
+            if (partnerSocket) {
+                partnerSocket.emit('call:ended', {
+                    peerId: userId,
+                    reason: 'disconnected'
                 });
             }
+
+            // Cleanup both users' call states
+            userCallState.delete(userId);
+            userCallState.delete(callState.partnerId);
+
+            logger.info(`Call auto-ended due to disconnect: ${userId}`);
         }
 
+        // Room Cleanup
         const currentRoom = socket.data.currentRoom;
         const dId = socket.data.deviceId;
         if (currentRoom && dId && roomPresence.has(currentRoom)) {

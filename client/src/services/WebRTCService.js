@@ -1,263 +1,304 @@
 /**
- * WebRTCService (Room-Based)
- * Manages P2P connections via manual room joining.
+ * WebRTCService - Pure WebRTC Connection Management
  * 
- * Flow:
- * 1. joinP2PRoom(roomId)
- * 2. Wait for 'p2p:ready' event from server.
- * 3. If initiator: createDataChannel -> createOffer
- * 4. If receiver: wait for DataChannel -> (Automatic Answer via signaling)
+ * Responsibilities:
+ * - Create and manage RTCPeerConnection
+ * - Access user media (camera/microphone)
+ * - Handle SDP offer/answer exchange
+ * - Process ICE candidates
+ * - Cleanup on call end
  */
 
-const CHUNK_SIZE = 16 * 1024; // 16KB per chunk
-const EOF_SIGNAL = 'EOF::';
+const ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+];
 
 class WebRTCService {
-    constructor(socket, onProgress, onComplete, onError, onStatusChange) {
-        this.socket = socket;
-        this.onProgress = onProgress;
-        this.onComplete = onComplete;
-        this.onError = onError;
-        this.onStatusChange = onStatusChange || (() => { });
-
+    constructor() {
         this.peerConnection = null;
-        this.dataChannel = null;
-        this.currentRoom = null;
-        this.fileToSend = null;
+        this.localStream = null;
+        this.remoteStream = null;
+        this.pendingIceCandidates = [];
+        this.remoteDescriptionSet = false;
 
-        this.receiveBuffer = [];
-        this.receivedSize = 0;
-        this.incomingFileMeta = null;
+        // Event callbacks
+        this.onRemoteStream = null;
+        this.onIceCandidate = null;
+        this.onConnectionStateChange = null;
     }
 
-    // --- PUBLIC API ---
-
-    joinP2PRoom(roomId) {
-        this.reset();
-        this.currentRoom = roomId;
-        this.socket.emit('p2p:join', roomId);
-        this.onStatusChange('waiting');
-    }
-
-    leaveP2PRoom() {
-        if (this.currentRoom) {
-            this.socket.emit('p2p:leave');
-        }
-        this.reset();
-    }
-
-    sendFile(file) {
-        if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
-            this.onError('Connection not ready');
+    /**
+     * Initialize peer connection with ICE servers
+     */
+    async initializePeerConnection() {
+        if (this.peerConnection) {
+            console.warn('Peer connection already exists');
             return;
         }
-        this.fileToSend = file;
-        this.startSending();
+
+        this.peerConnection = new RTCPeerConnection({
+            iceServers: ICE_SERVERS
+        });
+
+        // Handle remote stream
+        this.peerConnection.ontrack = (event) => {
+            console.log('📺 Received remote track:', event.track.kind);
+            if (!this.remoteStream) {
+                this.remoteStream = new MediaStream();
+            }
+            this.remoteStream.addTrack(event.track);
+
+            if (this.onRemoteStream) {
+                this.onRemoteStream(this.remoteStream);
+            }
+        };
+
+        // Handle ICE candidates
+        this.peerConnection.onicecandidate = (event) => {
+            if (event.candidate && this.onIceCandidate) {
+                console.log('🧊 ICE candidate generated');
+                this.onIceCandidate(event.candidate);
+            }
+        };
+
+        // Monitor connection state
+        this.peerConnection.onconnectionstatechange = () => {
+            const state = this.peerConnection.connectionState;
+            console.log('🔗 Connection state:', state);
+
+            if (this.onConnectionStateChange) {
+                this.onConnectionStateChange(state);
+            }
+
+            // Auto-cleanup on failed connection
+            if (state === 'failed' || state === 'closed') {
+                console.error('❌ Connection failed or closed');
+                this.cleanup();
+            }
+        };
+
+        console.log('✅ Peer connection initialized');
     }
 
-    reset() {
+    /**
+     * Access user's camera and microphone
+     */
+    async getUserMedia() {
+        try {
+            this.localStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            });
+
+            console.log('🎥 Got local media stream');
+
+            // Add local tracks to peer connection
+            if (this.peerConnection) {
+                this.localStream.getTracks().forEach(track => {
+                    this.peerConnection.addTrack(track, this.localStream);
+                    console.log('➕ Added local track:', track.kind);
+                });
+            }
+
+            return this.localStream;
+        } catch (error) {
+            console.error('❌ Failed to get user media:', error);
+            throw new Error(`Camera/Microphone access denied: ${error.message}`);
+        }
+    }
+
+    /**
+     * Create SDP offer (caller side)
+     */
+    async createOffer() {
+        if (!this.peerConnection) {
+            throw new Error('Peer connection not initialized');
+        }
+
+        try {
+            const offer = await this.peerConnection.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+            });
+
+            await this.peerConnection.setLocalDescription(offer);
+            console.log('📤 Created and set local offer');
+
+            return offer;
+        } catch (error) {
+            console.error('❌ Failed to create offer:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle incoming SDP offer (recipient side)
+     */
+    async handleOffer(offer) {
+        if (!this.peerConnection) {
+            throw new Error('Peer connection not initialized');
+        }
+
+        try {
+            await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            this.remoteDescriptionSet = true;
+            console.log('📥 Set remote offer');
+
+            // Process any pending ICE candidates
+            this.processPendingIceCandidates();
+
+            // Create answer
+            const answer = await this.peerConnection.createAnswer();
+            await this.peerConnection.setLocalDescription(answer);
+            console.log('📤 Created and set local answer');
+
+            return answer;
+        } catch (error) {
+            console.error('❌ Failed to handle offer:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle incoming SDP answer (caller side)
+     */
+    async handleAnswer(answer) {
+        if (!this.peerConnection) {
+            throw new Error('Peer connection not initialized');
+        }
+
+        try {
+            await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            this.remoteDescriptionSet = true;
+            console.log('📥 Set remote answer');
+
+            // Process any pending ICE candidates
+            this.processPendingIceCandidates();
+        } catch (error) {
+            console.error('❌ Failed to handle answer:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Add ICE candidate
+     */
+    async addIceCandidate(candidate) {
+        if (!this.peerConnection) {
+            console.warn('Peer connection not ready, ignoring ICE candidate');
+            return;
+        }
+
+        // Queue candidates if remote description not set yet
+        if (!this.remoteDescriptionSet) {
+            console.log('🧊 Queueing ICE candidate (remote description not set)');
+            this.pendingIceCandidates.push(candidate);
+            return;
+        }
+
+        try {
+            await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log('🧊 Added ICE candidate');
+        } catch (error) {
+            console.error('❌ Failed to add ICE candidate:', error);
+        }
+    }
+
+    /**
+     * Process queued ICE candidates
+     */
+    processPendingIceCandidates() {
+        console.log(`🧊 Processing ${this.pendingIceCandidates.length} pending ICE candidates`);
+
+        this.pendingIceCandidates.forEach(candidate => {
+            this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+                .catch(err => console.error('Failed to add queued ICE candidate:', err));
+        });
+
+        this.pendingIceCandidates = [];
+    }
+
+    /**
+     * Toggle local audio mute
+     */
+    toggleMute() {
+        if (!this.localStream) return false;
+
+        const audioTrack = this.localStream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            console.log('🎤 Audio:', audioTrack.enabled ? 'unmuted' : 'muted');
+            return !audioTrack.enabled; // Return muted state
+        }
+        return false;
+    }
+
+    /**
+     * Toggle local video
+     */
+    toggleVideo() {
+        if (!this.localStream) return false;
+
+        const videoTrack = this.localStream.getVideoTracks()[0];
+        if (videoTrack) {
+            videoTrack.enabled = !videoTrack.enabled;
+            console.log('📹 Video:', videoTrack.enabled ? 'enabled' : 'disabled');
+            return !videoTrack.enabled; // Return video off state
+        }
+        return false;
+    }
+
+    /**
+     * Complete cleanup - CRITICAL
+     */
+    cleanup() {
+        console.log('🧹 Cleaning up WebRTC resources...');
+
+        // Stop all local tracks
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => {
+                track.stop();
+                console.log('⏹️  Stopped local track:', track.kind);
+            });
+            this.localStream = null;
+        }
+
+        // Stop all remote tracks
+        if (this.remoteStream) {
+            this.remoteStream.getTracks().forEach(track => {
+                track.stop();
+            });
+            this.remoteStream = null;
+        }
+
+        // Close peer connection
         if (this.peerConnection) {
             this.peerConnection.close();
             this.peerConnection = null;
-        }
-        if (this.dataChannel) {
-            this.dataChannel.close();
-            this.dataChannel = null;
-        }
-        this.currentRoom = null;
-        this.fileToSend = null;
-        this.receiveBuffer = [];
-        this.receivedSize = 0;
-        this.incomingFileMeta = null;
-        this.onStatusChange('idle');
-    }
-
-    // --- SIGNALING HANDLERS (To be called from Component) ---
-
-    handleP2PReady({ isInitiator }) {
-        console.log('P2P Ready. Initiator:', isInitiator);
-        this.onStatusChange('connected');
-        this.initConnection(isInitiator);
-    }
-
-    handleOffer(offer) {
-        if (!this.peerConnection) this.initConnection(false); // Should already be initialized but safe check
-
-        console.log('Received Offer');
-        this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-            .then(() => this.peerConnection.createAnswer())
-            .then(answer => this.peerConnection.setLocalDescription(answer))
-            .then(() => {
-                this.socket.emit('webrtc:answer', { answer: this.peerConnection.localDescription });
-            })
-            .catch(err => this.onError(`Handle Offer Error: ${err.message}`));
-    }
-
-    handleAnswer(answer) {
-        console.log('Received Answer');
-        if (this.peerConnection) {
-            this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
-                .catch(err => this.onError(`Handle Answer Error: ${err.message}`));
-        }
-    }
-
-    handleCandidate(candidate) {
-        if (this.peerConnection) {
-            this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-                .catch(err => console.error('Error adding ICE:', err));
-        }
-    }
-
-    // --- INTERNAL WEBRTC LOGIC ---
-
-    initConnection(isInitiator) {
-        this.peerConnection = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
-
-        this.peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                this.socket.emit('webrtc:ice-candidate', { candidate: event.candidate });
-            }
-        };
-
-        this.peerConnection.onconnectionstatechange = () => {
-            console.log('Connection State:', this.peerConnection.connectionState);
-            if (['disconnected', 'failed', 'closed'].includes(this.peerConnection.connectionState)) {
-                this.onError('Peer disconnected');
-                this.onStatusChange('disconnected');
-            }
-        };
-
-        if (isInitiator) {
-            const channel = this.peerConnection.createDataChannel("file-transfer");
-            this.setupDataChannel(channel);
-            this.dataChannel = channel;
-
-            this.peerConnection.createOffer()
-                .then(offer => this.peerConnection.setLocalDescription(offer))
-                .then(() => {
-                    this.socket.emit('webrtc:offer', { offer: this.peerConnection.localDescription });
-                })
-                .catch(err => this.onError(`Create Offer Error: ${err.message}`));
-        } else {
-            this.peerConnection.ondatachannel = (event) => {
-                this.setupDataChannel(event.channel);
-                this.dataChannel = event.channel;
-            };
-        }
-    }
-
-    setupDataChannel(channel) {
-        channel.binaryType = 'arraybuffer';
-        channel.onopen = () => {
-            console.log('Data Channel OPEN');
-            this.onStatusChange('ready_to_transfer');
-        };
-        channel.onclose = () => {
-            console.log('Data Channel CLOSED');
-            this.onStatusChange('connected'); // Fallback or discon?
-        };
-        channel.onmessage = this.handleDataMessage.bind(this);
-        channel.onerror = (err) => this.onError(`DataChannel Error: ${err.message}`);
-    }
-
-    // --- TRANSFER LOGIC ---
-
-    startSending() {
-        if (!this.fileToSend || !this.dataChannel) return;
-
-        const file = this.fileToSend;
-        this.onStatusChange('transferring');
-
-        // 1. Send Metadata
-        const metadata = JSON.stringify({
-            name: file.name,
-            size: file.size,
-            type: file.type
-        });
-        this.dataChannel.send(`META::${metadata}`);
-
-        // 2. Start Chunking
-        let offset = 0;
-        const reader = new FileReader();
-
-        const readSlice = (o) => {
-            const slice = file.slice(o, o + CHUNK_SIZE);
-            reader.readAsArrayBuffer(slice);
-        };
-
-        reader.onload = (e) => {
-            if (!this.dataChannel || this.dataChannel.readyState !== 'open') return;
-
-            try {
-                this.dataChannel.send(e.target.result);
-                offset += e.target.result.byteLength;
-
-                const progress = Math.round((offset / file.size) * 100);
-                this.onProgress(progress, 'sending');
-
-                if (offset < file.size) {
-                    if (this.dataChannel.bufferedAmount > 10 * 1024 * 1024) {
-                        const checkBuffer = setInterval(() => {
-                            if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
-                                clearInterval(checkBuffer);
-                                return;
-                            }
-                            if (this.dataChannel.bufferedAmount < 1 * 1024 * 1024) {
-                                clearInterval(checkBuffer);
-                                readSlice(offset);
-                            }
-                        }, 50);
-                    } else {
-                        setTimeout(() => readSlice(offset), 0);
-                    }
-                } else {
-                    this.dataChannel.send(EOF_SIGNAL);
-                    this.onComplete(file.name);
-                    this.onStatusChange('ready_to_transfer');
-                    this.fileToSend = null;
-                }
-            } catch (err) {
-                this.onError(`Send Error: ${err.message}`);
-            }
-        };
-
-        readSlice(0);
-    }
-
-    handleDataMessage(event) {
-        const data = event.data;
-
-        if (typeof data === 'string') {
-            if (data.startsWith('META::')) {
-                this.incomingFileMeta = JSON.parse(data.substring(6));
-                this.receiveBuffer = [];
-                this.receivedSize = 0;
-                this.onStatusChange('transferring');
-                console.log('Receiving:', this.incomingFileMeta);
-            } else if (data === EOF_SIGNAL) {
-                this.finishReceiving();
-            }
-            return;
+            console.log('🔌 Peer connection closed');
         }
 
-        if (this.incomingFileMeta) {
-            this.receiveBuffer.push(data);
-            this.receivedSize += data.byteLength;
-            const progress = Math.round((this.receivedSize / this.incomingFileMeta.size) * 100);
-            this.onProgress(progress, 'receiving');
-        }
+        // Reset state
+        this.pendingIceCandidates = [];
+        this.remoteDescriptionSet = false;
+
+        console.log('✅ Cleanup complete');
     }
 
-    finishReceiving() {
-        if (!this.incomingFileMeta) return;
-        const blob = new Blob(this.receiveBuffer, { type: this.incomingFileMeta.type });
-        this.onComplete(this.incomingFileMeta.name, blob);
-        this.receiveBuffer = [];
-        this.incomingFileMeta = null;
-        this.receivedSize = 0;
-        this.onStatusChange('ready_to_transfer');
+    /**
+     * Get connection statistics (optional, for monitoring)
+     */
+    async getStats() {
+        if (!this.peerConnection) return null;
+
+        try {
+            const stats = await this.peerConnection.getStats();
+            return stats;
+        } catch (error) {
+            console.error('Failed to get stats:', error);
+            return null;
+        }
     }
 }
 

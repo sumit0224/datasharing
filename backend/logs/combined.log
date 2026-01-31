@@ -1039,3 +1039,102 @@
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T12:40:35.513Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T12:44:24.462Z"}
 {"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-30T12:44:29.174Z"}
+{"level":"info","message":"🚀 Server running on port 3000","timestamp":"2026-01-31T09:12:37.571Z"}
+{"level":"info","message":"🌍 Environment: development","timestamp":"2026-01-31T09:12:37.572Z"}
+{"level":"info","message":"💾 Database: MongoDB","timestamp":"2026-01-31T09:12:37.572Z"}
+{"level":"info","message":"🗄️ Storage: Cloudflare R2","timestamp":"2026-01-31T09:12:37.572Z"}
+{"level":"info","message":"🧠 Real-Time: In-Memory Adapter","timestamp":"2026-01-31T09:12:37.573Z"}
+{"level":"info","message":"⏱️ Text Expiry: 10 Minutes | File Expiry: 2 Minutes","timestamp":"2026-01-31T09:12:37.573Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-31T09:12:38.170Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T09:13:04.759Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:03:01.149Z"}
+{"level":"info","message":"socket LYQZ7z4qIhjCUDK_AAAF joined P2P room 123. Count: 1","timestamp":"2026-01-31T10:03:08.311Z"}
+{"level":"info","message":"socket LYQZ7z4qIhjCUDK_AAAF joined P2P room 123. Count: 1","timestamp":"2026-01-31T10:03:25.577Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:04:19.593Z"}
+{"level":"info","message":"socket FFZi1W4yQmsyVrjGAAAI joined P2P room 123. Count: 1","timestamp":"2026-01-31T10:04:26.125Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:08:21.035Z"}
+{"level":"info","message":"socket GkeGI1uEPZKu1ZouAAAL joined P2P room 123. Count: 1","timestamp":"2026-01-31T10:08:28.026Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:09:03.371Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:12:16.137Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:12:38.772Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:14:10.977Z"}
+{"level":"info","message":"socket 6-kn8k95VtPZzYYZAAAX joined P2P room 0US5J6. Count: 1","timestamp":"2026-01-31T10:14:16.404Z"}
+{"level":"info","message":"socket VTQGUA_CFJ1h5-XsAAAO joined P2P room 0US5J6. Count: 1","timestamp":"2026-01-31T10:14:37.293Z"}
+{"level":"info","message":"socket VTQGUA_CFJ1h5-XsAAAO joined P2P room BIO0MM. Count: 1","timestamp":"2026-01-31T10:24:15.072Z"}
+{"level":"info","message":"socket 6-kn8k95VtPZzYYZAAAX joined P2P room BIO0MM. Count: 1","timestamp":"2026-01-31T10:24:29.954Z"}
+{"level":"info","message":"socket VTQGUA_CFJ1h5-XsAAAO joined P2P room BIO0MM. Count: 1","timestamp":"2026-01-31T10:24:49.968Z"}
+{"level":"info","message":"socket VTQGUA_CFJ1h5-XsAAAO joined P2P room IZJZUN. Count: 1","timestamp":"2026-01-31T10:25:35.138Z"}
+{"level":"info","message":"socket 6-kn8k95VtPZzYYZAAAX joined P2P room IZJZUN. Count: 1","timestamp":"2026-01-31T10:25:48.306Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:29:57.718Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:29:58.534Z"}
+{"level":"info","message":"socket dIW-Roc57DdutTR2AAAd joined P2P room 2TK8IS. Count: 1","timestamp":"2026-01-31T10:30:03.403Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:30:24.558Z"}
+{"level":"info","message":"socket nOtpHzGBU1rZRoNkAAAg joined P2P room 2TK8IS. Count: 1","timestamp":"2026-01-31T10:30:28.238Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:35:31.019Z"}
+{"level":"info","message":"socket zMBujFUCe78NzWy4AAAj joined P2P room CTHU0H. Count: 1","timestamp":"2026-01-31T10:35:33.135Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:35:42.164Z"}
+{"level":"info","message":"socket bS2Lh8TtOHGS7DDSAAAm joined P2P room CTHU0H. Count: 1","timestamp":"2026-01-31T10:35:47.306Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:44:49.668Z"}
+{"level":"info","message":"socket fjH8MGz5zwtEaMHCAAAp joined P2P room BSQYMQ. Count: 1","timestamp":"2026-01-31T10:44:52.317Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:45:02.779Z"}
+{"level":"info","message":"socket jZUqWn4Inv3nUa9lAAAs joined P2P room BSQYMQ. Count: 1","timestamp":"2026-01-31T10:45:07.322Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:49:17.366Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:50:18.201Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:50:27.400Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:51:17.346Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:51:17.353Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:51:17.358Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:57:57.808Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T10:57:59.371Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:13:57.287Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:13:57.288Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:13:57.298Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:25:41.724Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:25:42.277Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:25:42.296Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:25:42.307Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:25:52.839Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:26:21.450Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:26:33.739Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:27:05.210Z"}
+{"level":"info","message":"📤 File upload request from: web","timestamp":"2026-01-31T11:27:41.497Z"}
+{"level":"info","message":"File uploaded: test.txt to room local-room","timestamp":"2026-01-31T11:27:41.635Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:28:16.288Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:30:51.628Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:35:29.444Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:35:29.452Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:35:29.473Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:35:30.290Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:35:30.306Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:35:30.306Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:36:37.724Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:37:05.782Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:37:38.563Z"}
+{"address":"::","code":"EADDRINUSE","errno":-48,"level":"error","message":"Uncaught Exception: listen EADDRINUSE: address already in use :::3000","port":3000,"stack":"Error: listen EADDRINUSE: address already in use :::3000\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at Server.listen (node:net:2102:7)\n    at /Users/harshvardhan/Desktop/backend/airForShare/backend/server.js:846:16\n    at Object.<anonymous> (/Users/harshvardhan/Desktop/backend/airForShare/backend/server.js:858:3)\n    at Module._compile (node:internal/modules/cjs/loader:1761:14)\n    at Object..js (node:internal/modules/cjs/loader:1893:10)\n    at Module.load (node:internal/modules/cjs/loader:1481:32)\n    at Module._load (node:internal/modules/cjs/loader:1300:12)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)","syscall":"listen","timestamp":"2026-01-31T11:39:10.280Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-31T11:39:11.424Z"}
+{"level":"info","message":"🚀 Server running on port 3000","timestamp":"2026-01-31T11:39:30.451Z"}
+{"level":"info","message":"🌍 Environment: development","timestamp":"2026-01-31T11:39:30.453Z"}
+{"level":"info","message":"💾 Database: MongoDB","timestamp":"2026-01-31T11:39:30.454Z"}
+{"level":"info","message":"🗄️ Storage: Cloudflare R2","timestamp":"2026-01-31T11:39:30.454Z"}
+{"level":"info","message":"🧠 Real-Time: In-Memory Adapter","timestamp":"2026-01-31T11:39:30.454Z"}
+{"level":"info","message":"⏱️ Text Expiry: 10 Minutes | File Expiry: 2 Minutes","timestamp":"2026-01-31T11:39:30.454Z"}
+{"level":"info","message":"✅ MongoDB Connected","timestamp":"2026-01-31T11:39:31.022Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:31.304Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:31.306Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:31.311Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:32.725Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:33.079Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:33.436Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:33.870Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:39:35.176Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:41:35.912Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:42:46.492Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:43:16.453Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:47:18.193Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:47:42.132Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:48:20.087Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:48:46.690Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:52:02.251Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:54:16.233Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:55:15.480Z"}
+{"level":"info","message":"🔌 New Client Connected:","timestamp":"2026-01-31T11:55:22.557Z"}

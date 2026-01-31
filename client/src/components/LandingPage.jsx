@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Logo from './Logo';
 import MouseGlow from './MouseGlow';  // [NEW] Import MouseGlow
 import HeroCanvas from './HeroCanvas'; // [NEW] Import 3D Canvas
 
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const LandingPage = () => {
     const navigate = useNavigate();
     const [openIndex, setOpenIndex] = useState(0);
+    const [stats, setStats] = useState({ totalUsers: 0, activeConnections: 0 });
+
+    useEffect(() => {
+        fetch(`${SOCKET_URL}/api/stats`)
+            .then(res => res.json())
+            .then(data => setStats(data))
+            .catch(err => console.error('Failed to fetch stats:', err));
+    }, []);
+
 
     const faqs = [
         {
@@ -119,6 +130,32 @@ const LandingPage = () => {
                     <div className="relative h-[350px] lg:h-[600px] w-full block">
                         <div className="absolute inset-0 pointer-events-none">
                             <HeroCanvas />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Stats Section */}
+            <section className="py-12 bg-gradient-to-b from-black to-gray-900/50 border-y border-white/5">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                        <div className="text-center">
+                            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
+                                {stats.totalUsers.toLocaleString()}+
+                            </div>
+                            <div className="text-gray-400 text-sm uppercase tracking-wider">Total Users</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
+                                {stats.activeConnections}
+                            </div>
+                            <div className="text-gray-400 text-sm uppercase tracking-wider">Active Now</div>
+                        </div>
+                        <div className="text-center col-span-2 md:col-span-1">
+                            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#20B2AA] to-teal-300 mb-2 font-orbitron">
+                                100%
+                            </div>
+                            <div className="text-gray-400 text-sm uppercase tracking-wider">Private</div>
                         </div>
                     </div>
                 </div>
