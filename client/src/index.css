@@ -1,11 +1,22 @@
 @import "tailwindcss";
 
+:root {
+    color-scheme: dark;
+}
+
 html,
 body {
-    background-color: rgb(249, 246, 246);
+    background-color: #000000;
+    /* Fixed: Black to match theme */
+    color: #ffffff;
     overscroll-behavior: none;
+    /* Prevents bounce on iOS */
     margin: 0;
     padding: 0;
+    width: 100%;
+    height: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* Remove gray tap highlight on iOS */
 }
 
 .font-orbitron {
@@ -14,6 +25,39 @@ body {
 
 .font-marker {
     font-family: 'Permanent Marker', cursive;
+}
+
+/* -----------------------------
+   iOS Viewport & Safe Area Fixes
+----------------------------- */
+
+@layer utilities {
+
+    /* Override Tailwind's default 100vh with iOS-safe units */
+    .h-screen {
+        height: 100vh;
+        /* Fallback */
+        height: 100svh;
+        /* Modern iOS/Android */
+    }
+
+    .min-h-screen {
+        min-height: 100vh;
+        /* Fallback */
+        min-height: 100svh;
+        /* Modern iOS/Android */
+    }
+
+    /* Old iOS Fallback */
+    @supports (-webkit-touch-callout: none) {
+        .h-screen {
+            height: -webkit-fill-available;
+        }
+
+        .min-h-screen {
+            min-height: -webkit-fill-available;
+        }
+    }
 }
 
 /* -----------------------------

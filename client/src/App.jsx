@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import LandingPage from './components/LandingPage';
-import WebApp from './components/WebApp';
-import NotFound from './components/NotFound';
-import AppPrivacy from './components/AppPrivacy';
-import AppTerms from './components/AppTerms';
+
+// Lazy load components for better initial load performance (Code Splitting)
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const WebApp = lazy(() => import('./components/WebApp'));
+const NotFound = lazy(() => import('./components/NotFound'));
+const AppPrivacy = lazy(() => import('./components/AppPrivacy'));
+const AppTerms = lazy(() => import('./components/AppTerms'));
+
+// Minimal Loader Component (Matches index.html critical CSS)
+const LoadingFallback = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+    <div className="w-10 h-10 border-[3px] border-white/10 border-t-[#20B2AA] rounded-full animate-spin"></div>
+  </div>
+);
 
 function App() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -66,14 +75,16 @@ function App() {
         pauseOnHover
         theme="light"
       />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/app" element={<WebApp />} />
-        <Route path="/privacy" element={<AppPrivacy />} />
-        <Route path="/terms" element={<AppTerms />} />
-        {/* 404 / Coming Soon Route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/app" element={<WebApp />} />
+          <Route path="/privacy" element={<AppPrivacy />} />
+          <Route path="/terms" element={<AppTerms />} />
+          {/* 404 / Coming Soon Route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

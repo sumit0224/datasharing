@@ -5,18 +5,90 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="apple-touch-icon" href="/vite.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#ffffff" />
-  <title> Wi-Fi Share - offline</title>
+
+  <!-- FIX: Optimized Viewport for iOS (prevents minor zooming issues & handles notch) -->
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+  <!-- FIX: Match background color to prevent status bar flicker -->
+  <meta name="theme-color" content="#000000" />
+  <meta name="color-scheme" content="dark">
+
+  <title>Wi-Fi Share - offline</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Permanent+Marker&display=swap"
     rel="stylesheet">
+
+  <!-- FIX: Critical Inline CSS to prevent White Flash -->
+  <style>
+    :root {
+      background-color: #000000;
+      color-scheme: dark;
+    }
+
+    html,
+    body {
+      background-color: #000000;
+      /* Match App's Dark Theme */
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    #root {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    /* Simple optimized loader to hide JS parsing delay */
+    #initial-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      transition: opacity 0.2s ease-out;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top-color: #20B2AA;
+      /* Teal accent from app */
+      animation: spin 0.8s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- FIX: Immediate paint content -->
+    <div id="initial-loader">
+      <div class="spinner"></div>
+    </div>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
